@@ -1,0 +1,397 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Rinder · Solana Stablecoin Payment Intelligence</title>
+<meta name="description" content="See where stablecoins are actually used as money. Payment intelligence for Solana.">
+<meta name="theme-color" content="#0c1515">
+<meta property="og:title" content="Rinder">
+<meta property="og:description" content="Solana Stablecoin Payment Intelligence.">
+<meta property="og:type" content="website">
+<link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+<link rel="preload" href="assets/fonts/pp-mondwest.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="assets/fonts/af-another-sans.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="assets/css/rinder.css">
+<script src="config.js" defer></script>
+<script src="data/demo.js" defer></script>
+<script src="assets/js/core.js" defer></script>
+<script src="assets/js/pixel.js" defer></script>
+<script src="assets/js/motion.js" defer></script>
+<script src="assets/js/app.js" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<!-- Navigation: floating glass pill, theme follows the section underneath -->
+<header class="nav" data-nav>
+  <div class="nav__inner">
+    <a class="nav__logo" href="#top" aria-label="Rinder home">
+      <span class="mark" data-mark aria-hidden="true"></span>
+      <span class="nav__word">Rinder</span>
+    </a>
+    <nav class="nav__links" aria-label="Primary">
+      <a href="#classification">Classification</a>
+      <a href="#analyzer">Analyzer</a>
+      <a href="#intelligence">Intelligence</a>
+      <a href="#verification">Verification</a>
+      <a href="#changes">Changes</a>
+    </nav>
+    <div class="nav__actions">
+      <a class="btn btn--dark" href="#analyzer">Analyze<span class="cap" aria-hidden="true" data-arrow></span></a>
+      <button class="nav__toggle" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="menu" data-menu-toggle>
+        <span></span><span></span>
+      </button>
+    </div>
+  </div>
+</header>
+<div class="menu" id="menu" hidden data-menu>
+  <nav aria-label="Mobile">
+    <a href="#classification">Classification</a>
+    <a href="#analyzer">Analyzer</a>
+    <a href="#intelligence">Intelligence</a>
+    <a href="#solana">Solana</a>
+    <a href="#verification">Verification</a>
+    <a href="#changes">Changes</a>
+    <a href="#api">API</a>
+  </nav>
+</div>
+
+<main id="main">
+
+<!-- Hero -->
+<section class="hero" id="top" data-nav-theme="dark" aria-labelledby="hero-title">
+  <canvas class="hero__art" data-scene="hero" aria-hidden="true"></canvas>
+  <div class="hero__shade" aria-hidden="true"></div>
+
+  <h1 class="hero__title" id="hero-title" data-words>Rinder Solana Stablecoin Payment Intelligence</h1>
+
+  <div class="hero__clock" aria-hidden="true">
+    <svg class="hero__compass" data-compass width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="5.88" cy="5.87" r="5.28" stroke="currentColor" stroke-width="1.2"/><path d="M5.88 4.84V.66" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+    <span class="hero__time" data-clock>00:00</span>
+    <span class="hero__zone">UTC</span>
+    <span class="hero__cluster" data-cluster>Solana</span>
+  </div>
+
+  <div class="hero__aside">
+    <span class="pixicon" data-pixicon="horizon" aria-hidden="true"></span>
+    <p>A transfer is not always a payment.</p>
+  </div>
+
+  <div class="hero__card glass">
+    <p class="eyebrow">Payment intelligence for Solana</p>
+    <h2 class="hero__headline">See where stablecoins are actually used as money.</h2>
+
+    <form class="search" role="search" data-search autocomplete="off">
+      <label class="sr-only" for="search-input">Search merchant, stablecoin or transaction</label>
+      <span class="search__icon" data-pixicon="search" aria-hidden="true"></span>
+      <input id="search-input" class="search__input" type="search" placeholder="Search merchant, stablecoin or transaction"
+        role="combobox" aria-expanded="false" aria-controls="search-results" aria-autocomplete="list" spellcheck="false">
+      <kbd class="search__kbd" aria-hidden="true">/</kbd>
+      <div class="search__results glass" id="search-results" role="listbox" aria-label="Search results" hidden></div>
+    </form>
+    <div class="search__hints" aria-label="Try">
+      <button type="button" class="hint" data-query="Northwind">Northwind Coffee</button>
+      <button type="button" class="hint" data-query="PYUSD">PYUSD</button>
+      <button type="button" class="hint" data-query="Meridian">Meridian Pay</button>
+      <button type="button" class="hint" data-query="demo0sig0Defi">A DeFi transaction</button>
+    </div>
+
+    <!-- Token CA: reads RINDER_CONFIG.token.mint. Empty mint shows Coming Soon. -->
+    <div class="ca" data-token-ca>
+      <span class="ca__label">Token CA</span>
+      <span class="ca__value" data-ca-value title="">Coming Soon</span>
+      <button class="ca__copy" type="button" data-ca-copy aria-label="Copy token CA. Not available yet">
+        <span class="ca__copy-icon" data-pixicon="copy" aria-hidden="true"></span>
+        <span class="ca__copy-text" data-ca-copy-text>Copy</span>
+      </button>
+    </div>
+  </div>
+</section>
+
+<div class="stripes stripes--slate" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+
+<!-- Overview -->
+<section class="section overview" id="overview" data-nav-theme="light" aria-labelledby="overview-title">
+  <div class="overview__grid">
+    <div class="overview__art">
+      <canvas class="pixelart" data-pixelart="receipt" width="300" height="450" role="img" aria-label="Pixel receipt with a verified stablecoin"></canvas>
+    </div>
+    <div class="overview__copy">
+      <p class="lede">A stablecoin transfer moves value.<br><br>It does not say why.</p>
+      <h2 class="display" id="overview-title" data-words>Rinder finds the transfers that are actually payments.</h2>
+    </div>
+  </div>
+
+  <div class="metrics" data-reveal>
+    <div class="metrics__head">
+      <span class="ticks" aria-hidden="true"><i class="on"></i><i></i><i></i><i></i><i></i></span>
+      <span class="label">Intelligence overview</span>
+      <span class="tag tag--demo">Demo data</span>
+    </div>
+    <dl class="metrics__grid" data-metrics></dl>
+  </div>
+</section>
+
+<!-- Transaction classification: sticky scroll stepper from the reference -->
+<section class="classify" id="classification" data-nav-theme="light" aria-labelledby="classify-title" data-classify>
+  <div class="classify__head">
+    <h2 class="display display--muted" id="classify-title">
+      <span>Every stablecoin transfer
+        <span class="pillword" tabindex="0" data-pillword>looks the same
+          <span class="pillword__pills" aria-hidden="true">
+            <span class="pill" style="--x:-20px;--y:-30px">Merchant payment</span>
+            <span class="pill" style="--x:20px;--y:-30px">DeFi</span>
+            <span class="pill" style="--x:-20px;--y:30px">Exchange</span>
+            <span class="pill" style="--x:20px;--y:30px">Treasury</span>
+          </span>
+        </span> on chain.</span>
+      <span class="display__strong">Rinder reads what it means.</span>
+    </h2>
+  </div>
+
+  <div class="classify__stage">
+    <div class="classify__steps">
+      <div class="ticks ticks--steps" role="tablist" aria-label="Classification steps" data-step-ticks></div>
+      <div class="classify__text" aria-live="polite">
+        <p class="classify__step-title" data-step-title>Observe</p>
+        <p class="classify__step-body" data-step-body>A USDC transfer lands on Solana.</p>
+      </div>
+    </div>
+    <figure class="fig">
+      <div class="fig__frame">
+        <div class="fig__inner">
+          <svg class="pipeline" data-pipeline viewBox="0 0 640 360" role="img" aria-label="Classification pipeline for a demo transfer"></svg>
+        </div>
+      </div>
+      <figcaption><span>Fig. 1</span><span>Classification of a demo transfer</span></figcaption>
+    </figure>
+  </div>
+
+  <div class="categories" data-reveal>
+    <p class="label">Seven outcomes. Unknown is one of them.</p>
+    <ul class="categories__grid" data-categories></ul>
+  </div>
+</section>
+
+<!-- Transaction analyzer: the reference's blue panel -->
+<section class="analyzer-wrap" id="analyzer" data-nav-theme="light" aria-labelledby="analyzer-title">
+  <div class="analyzer">
+    <canvas class="analyzer__art" data-scene="sky" aria-hidden="true"></canvas>
+    <div class="analyzer__body">
+      <div class="analyzer__intro">
+        <p class="eyebrow eyebrow--light">Transaction intelligence</p>
+        <h2 class="analyzer__title" id="analyzer-title">Is this actually a payment?</h2>
+        <p class="analyzer__type">Rinder can tell <span data-typewriter>a merchant payment from a DeFi swap</span><span class="caret" aria-hidden="true">|</span></p>
+      </div>
+
+      <form class="analyze" data-analyze autocomplete="off">
+        <label class="analyze__label" for="signature-input">Solana transaction signature</label>
+        <div class="analyze__row">
+          <input id="signature-input" class="analyze__input" type="text" placeholder="Solana transaction signature" spellcheck="false" autocapitalize="off">
+          <button class="btn btn--glass" type="submit">Analyze<span class="cap cap--light" aria-hidden="true" data-arrow></span></button>
+        </div>
+        <div class="analyze__samples" data-samples aria-label="Demo transactions"></div>
+      </form>
+
+      <div class="analyzer__foot">
+        <span class="pixicon pixicon--light" data-pixicon="scan" aria-hidden="true"></span>
+        <p>Demo records only. Live analysis arrives with the Rinder API.</p>
+      </div>
+    </div>
+
+    <div class="result glass-light" data-result aria-live="polite">
+      <div class="result__empty">
+        <p class="result__kicker">Waiting for a signature</p>
+        <p class="result__hint">Pick a demo transaction to see a result.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Merchant, stablecoin and provider intelligence: the reference's card grid -->
+<section class="section intel" id="intelligence" data-nav-theme="light" aria-labelledby="intel-title">
+  <div class="intel__head">
+    <h2 class="display" id="intel-title" data-words>Profiles for everything that touches a payment.</h2>
+    <a class="link" href="#explorer"><span class="link__text">Open the explorer</span><span class="cap cap--dark" aria-hidden="true" data-arrow></span></a>
+  </div>
+
+  <div class="cards" role="tablist" aria-label="Intelligence views">
+    <button class="card" type="button" role="tab" aria-selected="true" aria-controls="explorer" data-view="merchant">
+      <canvas class="card__art" data-scene="card-dawn" aria-hidden="true"></canvas>
+      <span class="card__ui" aria-hidden="true" data-card-ui="merchant"></span>
+      <span class="card__caption">
+        <span class="card__title">Merchant Intelligence</span>
+        <span class="card__meta">Acceptance, endpoints and providers</span>
+      </span>
+    </button>
+    <button class="card" type="button" role="tab" aria-selected="false" aria-controls="explorer" data-view="stablecoin">
+      <canvas class="card__art" data-scene="card-deep" aria-hidden="true"></canvas>
+      <span class="card__ui" aria-hidden="true" data-card-ui="stablecoin"></span>
+      <span class="card__caption">
+        <span class="card__title">Stablecoin Intelligence</span>
+        <span class="card__meta">USDC, USDT and PYUSD adoption</span>
+      </span>
+    </button>
+    <button class="card" type="button" role="tab" aria-selected="false" aria-controls="explorer" data-view="provider">
+      <canvas class="card__art" data-scene="card-dusk" aria-hidden="true"></canvas>
+      <span class="card__ui" aria-hidden="true" data-card-ui="provider"></span>
+      <span class="card__caption">
+        <span class="card__title">Provider Intelligence</span>
+        <span class="card__meta">Infrastructure behind checkout</span>
+      </span>
+    </button>
+  </div>
+
+  <div class="explorer" id="explorer" role="tabpanel" data-explorer tabindex="-1">
+    <div class="fig__frame">
+      <div class="explorer__inner">
+        <div class="explorer__list" data-explorer-list role="listbox" aria-label="Profiles"></div>
+        <div class="explorer__profile" data-explorer-profile></div>
+      </div>
+    </div>
+    <p class="figcap"><span>Fig. 2</span><span>Profile explorer, demo records</span></p>
+  </div>
+</section>
+
+<div class="stripes stripes--slate stripes--up" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+
+<!-- Solana intelligence: dark band -->
+<section class="solana" id="solana" data-nav-theme="dark" aria-labelledby="solana-title">
+  <div class="solana__inner">
+    <div class="solana__copy">
+      <p class="eyebrow eyebrow--light">Solana Intelligence</p>
+      <h2 class="display display--light" id="solana-title" data-words>Built around Solana. Nothing else.</h2>
+      <p class="solana__lede">Signatures, mints, token accounts, owners and programs.</p>
+      <dl class="solana__stats" data-solana-stats></dl>
+      <span class="tag tag--demo tag--onDark">Demo data</span>
+    </div>
+    <div class="solana__visual">
+      <figure class="map">
+        <div class="map__scroll" tabindex="0" aria-label="Address map, scrolls sideways on small screens"><svg class="map__svg" data-map viewBox="0 0 560 380" role="img" aria-label="How Rinder maps a stablecoin transfer on Solana"></svg></div>
+        <figcaption><span>Fig. 3</span><span>Address mapping for one transfer</span></figcaption>
+      </figure>
+    </div>
+  </div>
+  <div class="solana__lower">
+    <div class="feed" aria-label="Observed activity, demo">
+      <div class="feed__head"><span class="live" aria-hidden="true"></span><span class="label label--light">Observed activity</span></div>
+      <ol class="feed__list" data-feed></ol>
+    </div>
+    <div class="programs">
+      <div class="feed__head"><span class="label label--light">Program interactions</span></div>
+      <ul class="programs__list" data-programs></ul>
+    </div>
+  </div>
+</section>
+
+<div class="stripes stripes--slate" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+
+<!-- Verification -->
+<section class="section verify" id="verification" data-nav-theme="light" aria-labelledby="verify-title">
+  <div class="verify__grid">
+    <div class="verify__visual">
+      <svg class="seal" data-seal viewBox="0 0 240 240" role="img" aria-label="Verification state"></svg>
+      <p class="verify__state" data-seal-label>Verified</p>
+    </div>
+    <div class="verify__copy">
+      <h2 class="display" id="verify-title" data-words>Every claim carries a state.</h2>
+      <ul class="states" role="tablist" aria-label="Verification states" data-states></ul>
+    </div>
+  </div>
+
+  <div class="contrast" data-reveal>
+    <div class="contrast__col">
+      <p class="label">Verification</p>
+      <p class="contrast__q">Is the claim supported?</p>
+      <div class="contrast__demo"><span data-vbadge="VERIFIED"></span><span class="contrast__what">Northwind Coffee accepts USDC</span></div>
+    </div>
+    <div class="contrast__divider" aria-hidden="true"></div>
+    <div class="contrast__col">
+      <p class="label">Confidence</p>
+      <p class="contrast__q">Does this transaction fit?</p>
+      <div class="contrast__demo"><span data-cbadge="MEDIUM"></span><span class="contrast__what">One USDC transfer near that merchant</span></div>
+    </div>
+    <p class="contrast__note">Two questions. Two separate answers.</p>
+  </div>
+</section>
+
+<!-- Change intelligence -->
+<section class="section changes" id="changes" data-nav-theme="light" aria-labelledby="changes-title">
+  <div class="changes__head">
+    <h2 class="display" id="changes-title" data-words>Payment acceptance changes. Rinder keeps the history.</h2>
+    <div class="filters" role="group" aria-label="Filter changes" data-change-filters>
+      <button type="button" class="filter" aria-pressed="true" data-filter="all">All</button>
+      <button type="button" class="filter" aria-pressed="false" data-filter="stablecoin">Stablecoins</button>
+      <button type="button" class="filter" aria-pressed="false" data-filter="provider">Providers</button>
+      <button type="button" class="filter" aria-pressed="false" data-filter="endpoint">Endpoints</button>
+      <button type="button" class="filter" aria-pressed="false" data-filter="verification">Verification</button>
+    </div>
+  </div>
+  <ol class="timeline" data-timeline aria-label="Change events, demo"></ol>
+</section>
+
+<!-- API and data infrastructure -->
+<section class="section api" id="api" data-nav-theme="light" aria-labelledby="api-title">
+  <div class="api__grid">
+    <div class="api__copy">
+      <p class="eyebrow">Data infrastructure</p>
+      <h2 class="display" id="api-title" data-words>Payment intelligence as data.</h2>
+      <ul class="endpoints">
+        <li><span class="verb">GET</span><code>/v1/transactions/{signature}</code></li>
+        <li><span class="verb">GET</span><code>/v1/merchants/{id}</code></li>
+        <li><span class="verb">GET</span><code>/v1/stablecoins/{symbol}</code></li>
+        <li><span class="verb">GET</span><code>/v1/providers/{id}</code></li>
+        <li><span class="verb">GET</span><code>/v1/changes</code></li>
+      </ul>
+      <dl class="status" data-status></dl>
+    </div>
+    <figure class="fig api__fig">
+      <div class="fig__frame">
+        <div class="fig__inner fig__inner--code">
+          <pre class="code" data-code aria-label="Example response"></pre>
+        </div>
+      </div>
+      <figcaption><span>Fig. 4</span><span>Response shape, demo values</span></figcaption>
+    </figure>
+  </div>
+</section>
+
+</main>
+
+<footer class="footer" data-nav-theme="light">
+  <div class="footer__inner">
+    <span class="mark mark--lg" data-mark="light" aria-hidden="true"></span>
+    <h2 class="footer__title">Payment intelligence for Solana.</h2>
+    <a class="link" href="#top" data-focus-search><span class="link__text">Start with a search</span><span class="cap cap--dark" aria-hidden="true" data-arrow></span></a>
+    <div class="footer__bar">
+      <nav class="footer__nav" aria-label="Footer">
+        <a href="#classification">Classification</a>
+        <a href="#analyzer">Analyzer</a>
+        <a href="#intelligence">Intelligence</a>
+        <a href="#solana">Solana</a>
+        <a href="#verification">Verification</a>
+        <a href="#api">API</a>
+      </nav>
+      <div class="footer__social" data-social></div>
+    </div>
+  </div>
+  <div class="stripes stripes--mint" aria-hidden="true"><i></i><i></i><i></i></div>
+</footer>
+
+<!-- Fixed art revealed under the page, as in the reference footer -->
+<div class="curtain" aria-hidden="true">
+  <canvas class="curtain__art" data-scene="footer"></canvas>
+  <div class="curtain__shade"></div>
+  <div class="curtain__bar">
+    <span>© 2026 Rinder</span>
+    <span>Figures on this page are demo data.</span>
+  </div>
+</div>
+
+<div class="toast" role="status" aria-live="polite" data-toast hidden></div>
+</body>
+</html>

@@ -1,0 +1,13 @@
+{
+  "name": "rinder-web",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Rinder: Solana stablecoin payment intelligence. Static landing page.",
+  "type": "module",
+  "scripts": {
+    "dev": "node tools/serve.mjs 5280",
+    "audit": "node tools/check-copy.mjs",
+    "test": "node --test",
+    "check": "npm test && npm run audit"
+  }
+}
