@@ -173,17 +173,6 @@
     return `<svg viewBox="0 0 ${w} ${h}" fill="${color}" shape-rendering="crispEdges" aria-hidden="true">${rects}</svg>`;
   }
 
-  /** The Rinder mark: a pixel ring on a horizon, in the reference's tile. */
-  function mark(tone = "dark") {
-    const ink = tone === "light" ? "#1F2937" : "#F9FAF7";
-    const tile = tone === "light" ? "rgba(31,41,55,0.06)" : "url(#rgm)";
-    const u = 1.26895;
-    const ring = ["..###..", ".#...#.", "#.....#", "#..#..#", "#.....#", ".#...#.", "..###.."];
-    let cells = "";
-    ring.forEach((row, y) => [...row].forEach((ch, x) => { if (ch === "#") cells += `<rect x="${(13.48 + x * u).toFixed(3)}" y="${(11.2 + y * u).toFixed(3)}" width="${u}" height="${u}"/>`; }));
-    return `<svg viewBox="0 0 35 34" width="100%" height="100%" fill="none" aria-hidden="true"><defs><linearGradient id="rgm" x1="11.8" y1="0.4" x2="33.3" y2="35.4" gradientUnits="userSpaceOnUse"><stop stop-color="#F9FAF7" stop-opacity=".12"/><stop offset="1" stop-color="#F9FAF7" stop-opacity=".18"/></linearGradient></defs><rect x=".92" width="34" height="34" rx="6" fill="${tile}"/><g fill="${ink}">${cells}<rect x="6.5" y="20.99" width="22.84" height="1.27"/><rect x="8.45" y="16.55" width="2.54" height="1.27"/><rect x="24.9" y="16.55" width="2.54" height="1.27"/></g></svg>`;
-  }
-
   async function copyText(text) {
     try {
       await navigator.clipboard.writeText(text);
@@ -221,7 +210,7 @@
     CLUSTERS, CLASSIFICATIONS, VERIFICATION, CONFIDENCE, VERDICTS,
     isSolanaAddress, isSignature, resolveConfig, explorerLink,
     truncate, formatNumber, formatAmount, formatDate, formatTime, esc,
-    clsBadge, vBadge, cBadge, ringSvg, pixel, mark, copyText, copyButton, toast, reducedMotion,
+    clsBadge, vBadge, cBadge, ringSvg, pixel, copyText, copyButton, toast, reducedMotion,
   };
 
   if (typeof module === "object" && module.exports) module.exports = api;

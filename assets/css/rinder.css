@@ -155,14 +155,23 @@ a:hover .cap svg, button:hover .cap svg { animation: slideOut 0.8s linear infini
 .link:hover .link__text { border-color: var(--neutral-800); }
 .footer .link { align-self: center; }
 
-/* ---------- Pixel marks and icons (built in JS from bitmaps) ---------- */
-.mark { display: block; width: 34px; height: 34px; }
-.mark { position: relative; }
-.mark__d, .mark__l { position: absolute; inset: 0; transition: opacity 0.25s var(--ease); }
-.mark__l { opacity: 0; }
-.nav.is-light .mark__d { opacity: 0; }
-.nav.is-light .mark__l { opacity: 1; }
-.mark--lg { width: 48px; height: 48px; margin: 0 auto 32px; }
+/* ---------- Brand logo: lockup on small screens, mark in the desktop pill ---------- */
+.brand { position: relative; display: block; width: 94px; height: 26px; }
+.brand img { position: absolute; left: 0; top: 0; height: 26px; width: auto; transition: opacity 0.25s var(--ease); }
+.brand__mark { display: none; }
+.brand__l { opacity: 0; }
+.nav.is-light .brand__d { opacity: 0; }
+.nav.is-light .brand__l { opacity: 1; }
+@media (min-width: 1024px) {
+  .brand { width: 34px; height: 34px; }
+  .brand__lockup { display: none; }
+  .brand__mark { display: block; left: 5px; top: 4px; }
+}
+.footer__logo { display: block; height: 42px; width: auto; margin: 0 auto 32px; }
+.curtain__brand { display: inline-flex; align-items: center; gap: 8px; }
+.curtain__brand img { width: 15px; height: 16px; }
+
+/* ---------- Pixel icons (built in JS from bitmaps) ---------- */
 .pixicon { display: inline-block; width: 35px; height: 18px; color: var(--slate-5); }
 .pixicon svg { width: 100%; height: 100%; }
 .pixicon--light { color: rgba(255, 255, 255, 0.9); width: 28px; height: 20px; }
@@ -243,8 +252,6 @@ a:hover .cap svg, button:hover .cap svg { animation: slideOut 0.8s linear infini
 }
 .nav.is-light .nav__inner { color: var(--neutral-900); background: linear-gradient(90deg, rgba(254, 255, 252, 0.7), rgba(254, 255, 252, 0.82)); border-color: rgba(0, 0, 0, 0.06); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08); }
 .nav__logo { display: flex; align-items: center; gap: 10px; }
-.nav__word { font-family: var(--font-display); font-size: 19px; letter-spacing: -0.3px; }
-@media (min-width: 1024px) { .nav__word { display: none; } }
 .nav__links { display: none; gap: 24px; align-items: center; }
 .nav__links a { font-size: 15px; transition: opacity 0.25s var(--ease); }
 .nav__links a:hover { opacity: 0.8; }

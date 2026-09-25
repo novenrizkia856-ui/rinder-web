@@ -95,7 +95,7 @@
       }
     }
 
-    // The Rinder ring rising behind the skyline, as in the mark
+    // A pixel ring rising behind the skyline
     if (opts.ring) {
       const rcx = cx, rcy = hy + H * 0.02, rr = Math.min(W * 0.24, H * opts.ring);
       for (let y = Math.max(0, Math.floor(rcy - rr - 3)); y < hy; y++) {

@@ -48,7 +48,6 @@
   /* ---------------- Static decoration ---------------- */
 
   function decorate() {
-    $$("[data-mark]").forEach((el) => (el.innerHTML = el.dataset.mark === "light" ? R.mark("light") : `<span class="mark__d">${R.mark("dark")}</span><span class="mark__l">${R.mark("light")}</span>`));
     $$("[data-pixicon]").forEach((el) => (el.innerHTML = pixel(el.dataset.pixicon)));
     $$("[data-arrow]").forEach((el) => (el.innerHTML = pixel("arrow")));
     $$("[data-scene]").forEach((c) => P.mountScene(c));
