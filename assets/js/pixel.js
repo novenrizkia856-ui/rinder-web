@@ -293,7 +293,6 @@
   }
 
   const SCENES = {
-    hero: { cell: 4, make: (W, H) => cityScene(W, H, { seed: 7, ring: 0.3, horizon: 0.62, glowH: 0.26, glow: 0.62, skyLift: 0.42, tower: 34, particles: 30, skyRamp: PAL.nightSky }) },
     footer: { cell: 4, make: (W, H) => cityScene(W, H, { seed: 19, ring: 0.26, horizon: 0.55, glowH: 0.3, glow: 0.5, skyLift: 0.35, tower: 22, particles: 18, speed: 0.7, skyRamp: PAL.nightSky }) },
     sky: { cell: 4, make: (W, H) => skyScene(W, H, { seed: 5 }) },
     "card-dawn": { cell: 4, make: (W, H) => cardScene(W, H, { pal: "dawn", gx: 0.5, gy: 0.78, bars: true, seed: 3 }) },

@@ -27,6 +27,7 @@
 <script src="data/demo.js" defer></script>
 <script src="assets/js/core.js" defer></script>
 <script src="assets/js/pixel.js" defer></script>
+<script src="assets/js/hero.js" defer></script>
 <script src="assets/js/motion.js" defer></script>
 <script src="assets/js/app.js" defer></script>
 </head>
@@ -75,7 +76,12 @@
 
 <!-- Hero -->
 <section class="hero" id="top" data-nav-theme="dark" aria-labelledby="hero-title">
-  <canvas class="hero__art" data-scene="hero" aria-hidden="true"></canvas>
+  <!-- Hero visual: transfers pass through the Rinder lens and leave sorted. Drawn by assets/js/hero.js -->
+  <div class="hero__art" data-hero-art aria-hidden="true">
+    <canvas data-hero-back></canvas>
+    <canvas data-hero-fx></canvas>
+    <div class="hero__tags" data-hero-tags></div>
+  </div>
   <div class="hero__shade" aria-hidden="true"></div>
 
   <h1 class="hero__title" id="hero-title" data-words>Rinder Solana Stablecoin Payment Intelligence</h1>
