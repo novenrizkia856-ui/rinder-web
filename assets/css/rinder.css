@@ -417,9 +417,14 @@ a:hover .cap svg, button:hover .cap svg { animation: slideOut 0.8s linear infini
 
 /* ---------- Classification: sticky scroll stepper ---------- */
 .classify { position: relative; padding: 80px var(--pad-x) var(--pad-y); background: var(--paper); }
-@media (min-width: 1024px) { .classify { padding-top: 140px; } .classify.is-scrub { min-height: 3600px; } }
+@media (min-width: 1024px) {
+  .classify { padding-top: 140px; }
+  /* Head and stage pin as one block inside the track, so the categories only arrive after the pin lets go. */
+  .classify.is-scrub .classify__track { min-height: 3100px; }
+  .classify.is-scrub .classify__pin { position: sticky; top: 100px; }
+}
 .classify__head { max-width: 1080px; margin: 0 auto; }
-@media (min-width: 1024px) { .classify.is-scrub .classify__head { position: sticky; top: 100px; height: 270px; padding: 0 20px; } }
+@media (min-width: 1024px) { .classify.is-scrub .classify__head { height: 270px; padding: 0 20px; } }
 .classify__head .display { display: flex; flex-direction: column; gap: 32px; max-width: 28ch; padding-bottom: 16px; }
 .display__strong { color: var(--neutral-900); }
 .classify__head .display > span:first-child { color: #2c2c2c; }
@@ -450,7 +455,6 @@ a:hover .cap svg, button:hover .cap svg { animation: slideOut 0.8s linear infini
 .classify__stage { max-width: 1080px; margin: 0 auto; display: flex; flex-direction: column-reverse; gap: 40px; padding-top: 32px; }
 @media (min-width: 1024px) {
   .classify__stage { flex-direction: row; align-items: center; padding: 64px 20px 0; }
-  .classify.is-scrub .classify__stage { position: sticky; top: 370px; }
 }
 .classify__steps { display: flex; flex-direction: column; gap: 16px; flex: 1; max-width: 400px; min-height: 180px; }
 @media (min-width: 1024px) { .classify__steps { min-height: 320px; } }

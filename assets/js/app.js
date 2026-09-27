@@ -322,11 +322,17 @@
       if (still) return;
       auto = setInterval(() => { if (visible && Date.now() > userHold) set((current + 1) % STEPS.length); }, 3200);
     };
+    // Progress runs over the stretch where the pin is stuck inside its track.
+    const track = $("[data-classify-track]"), pin = $(".classify__pin");
+    const pinned = () => {
+      const r = track.getBoundingClientRect();
+      const top = parseFloat(getComputedStyle(pin).top) || 0;
+      return { r, top, span: Math.max(1, (r.height - pin.offsetHeight) * 0.9) };
+    };
     const onScroll = () => {
       if (!section.classList.contains("is-scrub")) return;
-      const r = section.getBoundingClientRect();
-      const span = r.height - innerHeight;
-      const p = Math.min(0.999, Math.max(0, -r.top / Math.max(1, span * 0.78)));
+      const { r, top, span } = pinned();
+      const p = Math.min(0.999, Math.max(0, (top - r.top) / span));
       set(Math.floor(p * STEPS.length));
     };
     const mode = () => {
@@ -338,9 +344,8 @@
 
     tickBtns.forEach((b, i) => b.addEventListener("click", () => {
       if (section.classList.contains("is-scrub")) {
-        const r = section.getBoundingClientRect();
-        const span = (r.height - innerHeight) * 0.78;
-        scrollTo({ top: scrollY + r.top + ((i + 0.5) / STEPS.length) * span, behavior: "smooth" });
+        const { r, top, span } = pinned();
+        scrollTo({ top: scrollY + r.top - top + ((i + 0.5) / STEPS.length) * span, behavior: "smooth" });
       } else { userHold = Date.now() + 8000; set(i); }
     }));
     new IntersectionObserver(([e]) => (visible = e.isIntersecting), { threshold: 0.3 }).observe(section);
