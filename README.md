@@ -20,13 +20,13 @@ Any static server works too, for example `python -m http.server 5280`.
 | `index.html` | The page |
 | `config.js` | **All deployment values**: cluster, RPC, explorer, program IDs, token mint, API, stablecoin mints, links |
 | `data/demo.js` | Demo merchants, providers, transactions, changes and metrics. Illustrative only |
-| `assets/css/rinder.css` | Pixel UI styles and tokens: stepped corner frames, bevels, dither, stepped motion |
+| `assets/css/rinder.css` | Styles and tokens |
 | `assets/js/core.js` | Config resolution, formatting, state glyphs, pixel icons, copy |
 | `assets/js/hero.js` | Hero pixel scene: transfers pass through the Rinder lens and leave sorted into the seven classifications |
 | `assets/js/pixel.js` | Dithered pixel scenes (analyzer sky, cards, footer) and the receipt art |
 | `assets/js/motion.js` | Word reveals, card reveals, counters, typewriter, clock, nav theme |
 | `assets/js/app.js` | Search, Token CA, analyzer, classification stepper, profiles, Solana map, verification, timeline, API status |
-| `assets/fonts/` | PP Mondwest for display, carried over from the reference design. Pixelify Sans, Silkscreen and VT323 load from Google Fonts |
+| `assets/fonts/` | af Another Sans and PP Mondwest, carried over from the reference design |
 
 ## Configuration
 

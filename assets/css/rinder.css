@@ -75,16 +75,13 @@
 @media (min-width: 1536px) { :root { --pad-x: 120px; --pad-y: 212px; } }
 
 /* ---------- Pixel frame system ----------
-   Stair: two stepped corners of --u, a --u ring in --bc and a --bg fill.
-   Notch: one missing corner pixel, ring drawn by the element itself. */
+   Stair: a mask of three overlapping bands cuts two stepped corners of --u, a --u ring in --bc and a --bg fill.
+   Notch: two bands leave one missing corner pixel, ring drawn by the element itself. */
 .hero__card::before, .search__results, .analyzer, .result, .fig__frame, .fig__inner, .explorer__inner,
 .card, .map, .contrast, .event__card, .categories__grid, .mini, .toast, .card__caption, .menu nav, .map__scroll {
   --u: 3px;
-  clip-path: polygon(
-    0 calc(var(--u) * 2), var(--u) calc(var(--u) * 2), var(--u) var(--u), calc(var(--u) * 2) var(--u), calc(var(--u) * 2) 0,
-    calc(100% - var(--u) * 2) 0, calc(100% - var(--u) * 2) var(--u), calc(100% - var(--u)) var(--u), calc(100% - var(--u)) calc(var(--u) * 2), 100% calc(var(--u) * 2),
-    100% calc(100% - var(--u) * 2), calc(100% - var(--u)) calc(100% - var(--u) * 2), calc(100% - var(--u)) calc(100% - var(--u)), calc(100% - var(--u) * 2) calc(100% - var(--u)), calc(100% - var(--u) * 2) 100%,
-    calc(var(--u) * 2) 100%, calc(var(--u) * 2) calc(100% - var(--u)), var(--u) calc(100% - var(--u)), var(--u) calc(100% - var(--u) * 2), 0 calc(100% - var(--u) * 2));
+  -webkit-mask: linear-gradient(#000 0 0) 0 calc(var(--u) * 2) / 100% calc(100% - var(--u) * 4) no-repeat, linear-gradient(#000 0 0) calc(var(--u) * 2) 0 / calc(100% - var(--u) * 4) 100% no-repeat, linear-gradient(#000 0 0) var(--u) var(--u) / calc(100% - var(--u) * 2) calc(100% - var(--u) * 2) no-repeat;
+  mask: linear-gradient(#000 0 0) 0 calc(var(--u) * 2) / 100% calc(100% - var(--u) * 4) no-repeat, linear-gradient(#000 0 0) calc(var(--u) * 2) 0 / calc(100% - var(--u) * 4) 100% no-repeat, linear-gradient(#000 0 0) var(--u) var(--u) / calc(100% - var(--u) * 2) calc(100% - var(--u) * 2) no-repeat;
   background:
     linear-gradient(var(--bc) 0 0) var(--u) var(--u) / var(--u) var(--u) no-repeat,
     linear-gradient(var(--bc) 0 0) right var(--u) top var(--u) / var(--u) var(--u) no-repeat,
@@ -96,8 +93,8 @@
 .btn, .cap, .hint, .search::before, .search__kbd, .ca__copy, .tag, .pill, .analyze__input, .sr, .sr__icon, .result__icon,
 .ent, .chip, .filter, .event__icon, .event__entity, .verb, .social, .skip, .hero__tag, .iconbtn, .nav__toggle, .ticks--steps button i {
   --n: 2px;
-  clip-path: polygon(0 var(--n), var(--n) var(--n), var(--n) 0, calc(100% - var(--n)) 0, calc(100% - var(--n)) var(--n), 100% var(--n),
-    100% calc(100% - var(--n)), calc(100% - var(--n)) calc(100% - var(--n)), calc(100% - var(--n)) 100%, var(--n) 100%, var(--n) calc(100% - var(--n)), 0 calc(100% - var(--n)));
+  -webkit-mask: linear-gradient(#000 0 0) 0 var(--n) / 100% calc(100% - var(--n) * 2) no-repeat, linear-gradient(#000 0 0) var(--n) 0 / calc(100% - var(--n) * 2) 100% no-repeat;
+  mask: linear-gradient(#000 0 0) 0 var(--n) / 100% calc(100% - var(--n) * 2) no-repeat, linear-gradient(#000 0 0) var(--n) 0 / calc(100% - var(--n) * 2) 100% no-repeat;
 }
 
 /* Dither: a 2px checkerboard, the pixel artist's 50% transparency */
@@ -297,7 +294,8 @@ a:hover .cap svg, button:hover .cap svg { animation: slideOut 0.8s steps(6, end)
       var(--nf);
     --nb: rgba(255, 255, 255, 0.28); --nf: rgba(11, 20, 20, 0.74);
     box-shadow: inset 0 0 0 var(--u) var(--nb), inset 0 -6px 0 rgba(0, 0, 0, 0.18);
-    clip-path: polygon(0 6px, 3px 6px, 3px 3px, 6px 3px, 6px 0, calc(100% - 6px) 0, calc(100% - 6px) 3px, calc(100% - 3px) 3px, calc(100% - 3px) 6px, 100% 6px, 100% calc(100% - 6px), calc(100% - 3px) calc(100% - 6px), calc(100% - 3px) calc(100% - 3px), calc(100% - 6px) calc(100% - 3px), calc(100% - 6px) 100%, 6px 100%, 6px calc(100% - 3px), 3px calc(100% - 3px), 3px calc(100% - 6px), 0 calc(100% - 6px));
+    -webkit-mask: linear-gradient(#000 0 0) 0 calc(3px * 2) / 100% calc(100% - 3px * 4) no-repeat, linear-gradient(#000 0 0) calc(3px * 2) 0 / calc(100% - 3px * 4) 100% no-repeat, linear-gradient(#000 0 0) 3px 3px / calc(100% - 3px * 2) calc(100% - 3px * 2) no-repeat;
+    mask: linear-gradient(#000 0 0) 0 calc(3px * 2) / 100% calc(100% - 3px * 4) no-repeat, linear-gradient(#000 0 0) calc(3px * 2) 0 / calc(100% - 3px * 4) 100% no-repeat, linear-gradient(#000 0 0) 3px 3px / calc(100% - 3px * 2) calc(100% - 3px * 2) no-repeat;
   }
 }
 .nav.is-light .nav__inner { color: var(--neutral-900); background: rgba(254, 255, 252, 0.9); box-shadow: inset 0 -2px 0 var(--stroke); }
