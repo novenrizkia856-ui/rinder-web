@@ -447,5 +447,6 @@
     io.observe(canvas);
   }
 
-  window.RinderPixel = { mountScene, mountPixelArt };
+  // The palette and dithering are shared with the hero lens in hero.js.
+  window.RinderPixel = { mountScene, mountPixelArt, bayer, dither, hex, ramp, PAL };
 })();

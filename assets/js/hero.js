@@ -1,52 +1,50 @@
 /**
- * Hero visual: the Rinder lens.
+ * Hero visual: the Rinder lens, in the same pixel style as the other scenes.
  *
  * Stablecoin transfers drift in from the left, all the same neutral light.
  * They pass through the lens core and leave to the right, sorted into the
  * seven classifications, each in its own colour. On wide screens they land
  * on a column of labels that light up as they arrive.
  *
- * Two canvases. The backdrop (sky, stars, lane guides, lens ring and dial,
- * the core with the mark, the dotted mirror floor) renders once per resize
- * at full resolution. The animated layer only covers the band the lanes run
- * through, holds nothing but soft glows (sweep, particles, core pulse) and so
- * renders at a lower resolution, like the pixel scenes before it. Animation
- * stops offscreen, in hidden tabs and for reduced motion, which gets a single
- * still frame instead. Slow devices drop to 30 fps.
+ * Like pixel.js it draws into a low resolution canvas with the shared palette
+ * and 4x4 Bayer dithering, scaled up with crisp pixels. The static layers
+ * (sky, lens, dial, core with the mark, floor and its reflection) render once
+ * per resize into a base buffer; each frame copies the base and draws the
+ * sweep, the particles and the core pulse. Animation stops offscreen, in
+ * hidden tabs and for reduced motion, which gets a single still frame.
  */
 (function () {
   "use strict";
 
   const root = document.querySelector("[data-hero-art]");
-  if (!root) return;
+  const P = window.RinderPixel;
+  if (!root || !P) return;
   const Rn = window.Rinder;
   const still = Rn && Rn.reducedMotion();
-  const back = root.querySelector("[data-hero-back]");
-  const fx = root.querySelector("[data-hero-fx]");
+  const canvas = root.querySelector("[data-hero-canvas]");
   const tagBox = root.querySelector("[data-hero-tags]");
-  const bctx = back.getContext("2d");
-  const ctx = fx.getContext("2d");
+  const ctx = canvas.getContext("2d", { alpha: false });
   const hero = root.parentElement;
+  const { bayer, dither, ramp, PAL } = P;
 
-  const NEUTRAL = [226, 234, 230];
-  const LIME = [192, 255, 1];
-  const MINT = [160, 215, 209];
   // Top to bottom on the right. The weight is how often a transfer lands there.
+  // Each ramp runs dark to bright; rgb is the label colour.
   const OUT = [
-    { key: "DIRECT_PAYMENT", rgb: [192, 255, 1], w: 0.19 },
-    { key: "PAYMENT_GATEWAY", rgb: [218, 255, 120], w: 0.21 },
-    { key: "DEFI", rgb: [111, 227, 210], w: 0.16 },
-    { key: "EXCHANGE", rgb: [80, 172, 222], w: 0.14 },
-    { key: "TREASURY", rgb: [226, 190, 122], w: 0.1 },
-    { key: "INTERNAL_TRANSFER", rgb: [168, 186, 240], w: 0.11 },
-    { key: "UNKNOWN", rgb: [150, 158, 154], w: 0.09 },
-  ];
+    { key: "DIRECT_PAYMENT", rgb: [192, 255, 1], w: 0.19, ramp: ["#1c2a06", "#3f5e06", "#78a603", "#a8e000", "#c0ff01", "#e6ff99"] },
+    { key: "PAYMENT_GATEWAY", rgb: [218, 255, 120], w: 0.21, ramp: ["#242f10", "#4d651c", "#86b033", "#bde66b", "#daff78", "#f2ffc9"] },
+    { key: "DEFI", rgb: [111, 227, 210], w: 0.16, ramp: ["#123633", "#1f5f58", "#3c9c8f", "#6fe3d2", "#9ff0e3", "#dcfaf5"] },
+    { key: "EXCHANGE", rgb: [80, 172, 222], w: 0.14, ramp: ["#0a2638", "#0a4f75", "#1f7fb5", "#50acde", "#8ccbee", "#d3ecf9"] },
+    { key: "TREASURY", rgb: [226, 190, 122], w: 0.1, ramp: ["#2e2615", "#5a4a2a", "#937a4f", "#e2be7a", "#efd29c", "#faf0dc"] },
+    { key: "INTERNAL_TRANSFER", rgb: [168, 186, 240], w: 0.11, ramp: ["#1d2238", "#373f6a", "#5e6cab", "#a8baf0", "#c7d3f6", "#eef2fd"] },
+    { key: "UNKNOWN", rgb: [150, 158, 154], w: 0.09, ramp: ["#232826", "#3d4442", "#626a67", "#969e9a", "#b5bbb8", "#e3e6e4"] },
+  ].map((o) => ({ ...o, px: ramp(o.ramp) }));
+  const NEUTRAL = ramp(["#1f2b2b", "#3a4d4d", "#728383", "#a5afaf", "#cfd3cf", "#fefffc"]);
+  const LIME = OUT[0].px;
+  const CORE = ramp(["#050a0a", "#081010", "#0b1616", "#0f1d1d", "#142626"]);
   const IN_LANES = 6;
-  const NEUTRAL_I = OUT.length, WHITE = OUT.length + 1, CELL = 32;
-  const DOTS = [...OUT.map((o) => o.rgb), NEUTRAL, [255, 255, 255]];
   const STEP = 3; // lane resolution in CSS px
+  const FPS = 30;
 
-  const rgba = (c, a) => `rgba(${c[0]},${c[1]},${c[2]},${a})`;
   const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 
   // Seeded random, so the sky is the same on every visit.
@@ -61,7 +59,7 @@
     };
   }
 
-  /* ---------------- Lanes ---------------- */
+  /* ---------------- Lanes, in CSS px ---------------- */
 
   function bezier(p0, p1, p2, p3, n) {
     const pts = [];
@@ -104,11 +102,10 @@
 
   /* ---------------- State ---------------- */
 
-  let W = 0, H = 0, dpr = 1, fdpr = 1, L = null;
-  let lanesIn = [], lanesOut = [], parts = [], stars = [], tags = [];
-  let ringSprite = null, dialSprite = null, sweepSprite = null, coreSprite = null, coreRing = null, atlas = null;
+  let W = 0, H = 0, GW = 0, GH = 0, sx = 1, sy = 1, L = null;
+  let base = null, buf = null, image = null;
+  let lanesIn = [], lanesOut = [], parts = [], stars = [], tags = [], rim = [];
   let pulse = 0, spawnDebt = 0, visible = true, raf = 0, last = 0, lastSize = "";
-  let lite = false, slow = 0, frames = 0;
   const mark = new Image();
   mark.src = "assets/img/mark-lime.png";
   const pos = [0, 0], tmp = [0, 0];
@@ -137,7 +134,7 @@
       L.cy = top + avail * 0.48;
       L.cx = W * 0.5;
     }
-    L.rc = Math.max(24, L.r * 0.19);
+    L.rc = Math.max(30, L.r * 0.25);
     L.horizon = L.cy + L.r * 1.05;
     return L;
   }
@@ -149,13 +146,13 @@
       const u = k / (IN_LANES - 1);
       const y0 = wide ? cy + (u - 0.7) * 1.95 * r : cy + (u - 0.5) * 2.3 * r;
       const x0 = -40;
-      const end = [cx - rc - 2, cy + (u - 0.5) * rc * 0.5];
+      const end = [cx - rc - 4, cy + (u - 0.5) * rc * 0.5];
       lanesIn.push(resample(bezier([x0, y0], [x0 + (cx - x0) * 0.46, y0], [end[0] - r * 0.62, cy + (y0 - cy) * 0.12], end, 90)));
     }
     lanesOut = OUT.map((c, j) => {
       const y1 = L.tags ? cy + (j - (OUT.length - 1) / 2) * L.gap : cy + (j / (OUT.length - 1) - 0.5) * 2.5 * r;
       const x1 = L.tags ? L.colX - 8 : W + 40;
-      const start = [cx + rc + 2, cy + (j / (OUT.length - 1) - 0.5) * rc * 0.5];
+      const start = [cx + rc + 4, cy + (j / (OUT.length - 1) - 0.5) * rc * 0.5];
       const lane = resample(bezier(start, [start[0] + r * 0.62, cy + (y1 - cy) * 0.18], [x1 - (x1 - cx) * 0.42, y1], [x1, y1], 90));
       lane.y1 = y1;
       return lane;
@@ -168,20 +165,18 @@
     return OUT.length - 1;
   }
 
-  function spawn(d) {
+  function spawn() {
     const out = pick();
-    const pay = out < 2;
     parts.push({
-      a: (Math.random() * IN_LANES) | 0, b: out, d: d || 0,
+      a: (Math.random() * IN_LANES) | 0, b: out, d: 0,
       v: (L.wide ? 150 : 90) * (0.8 + Math.random() * 0.5),
-      w: (pay ? 1.7 : 1.3) * (0.8 + Math.random() * 0.5),
       tail: (L.wide ? 46 : 30) * (0.7 + Math.random() * 0.7),
       crossed: false,
     });
   }
 
   // Distance along the joined path: in lane, a hidden hop behind the core, out lane.
-  function hop() { return L.rc * 2 + 4; }
+  function hop() { return L.rc * 2 + 8; }
   function place(p, d, o) {
     const A = lanesIn[p.a], B = lanesOut[p.b];
     if (d <= A.len) return at(A, d, o);
@@ -196,269 +191,148 @@
   }
   const total = (p) => lanesIn[p.a].len + hop() + lanesOut[p.b].len;
 
-  /* ---------------- Sprites ---------------- */
+  /* ---------------- Pixels ---------------- */
 
-  function sprite(size, draw) {
+  const put = (b, x, y, c) => { x |= 0; y |= 0; if (x >= 0 && y >= 0 && x < GW && y < GH) b[y * GW + x] = c; };
+
+  // The mark, sampled down to the pixel grid, lit along its upper left edges.
+  function markPixels(h) {
+    if (!mark.complete || !mark.naturalWidth) return [];
+    const w = Math.max(1, Math.round((h * mark.naturalWidth) / mark.naturalHeight));
     const c = document.createElement("canvas");
-    c.width = c.height = Math.ceil(size * dpr);
+    c.width = w; c.height = h;
     const g = c.getContext("2d");
-    g.scale(dpr, dpr);
-    g.translate(size / 2, size / 2);
-    draw(g);
-    return c;
+    g.drawImage(mark, 0, 0, w, h);
+    const a = g.getImageData(0, 0, w, h).data;
+    const on = (x, y) => x >= 0 && y >= 0 && x < w && y < h && a[(y * w + x) * 4 + 3] > 110;
+    const out = [];
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        if (!on(x, y)) continue;
+        const lit = !on(x - 1, y - 1) || !on(x, y - 1);
+        const shade = !on(x + 1, y + 1);
+        out.push(x - w / 2, y - h / 2, lit ? 5 : shade ? 3 : 4);
+      }
+    }
+    return out;
   }
 
-  function buildSprites() {
-    const { r } = L;
-    const size = r * 2.5;
-    ringSprite = sprite(size, (g) => {
-      const conic = g.createConicGradient ? g.createConicGradient(-Math.PI / 2, 0, 0) : null;
-      const stroke = conic || rgba(LIME, 0.8);
-      if (conic) {
-        conic.addColorStop(0, rgba(LIME, 0.95));
-        conic.addColorStop(0.2, rgba(MINT, 0.6));
-        conic.addColorStop(0.5, rgba([40, 90, 86], 0.25));
-        conic.addColorStop(0.8, rgba(MINT, 0.6));
-        conic.addColorStop(1, rgba(LIME, 0.95));
-      }
-      // glass thickness
-      g.beginPath(); g.arc(0, 0, r, 0, Math.PI * 2);
-      g.lineWidth = r * 0.07; g.strokeStyle = rgba(MINT, 0.045); g.stroke();
-      // lit rim with glow
-      g.shadowColor = rgba(LIME, 0.55); g.shadowBlur = 22;
-      g.lineWidth = Math.max(2, r * 0.012); g.strokeStyle = stroke; g.stroke();
-      g.shadowBlur = 0;
-      g.lineWidth = 0.8; g.strokeStyle = "rgba(255,255,255,0.35)"; g.stroke();
-      // inner and outer hairlines
-      for (const [k, a] of [[0.955, 0.12], [1.045, 0.08]]) {
-        g.beginPath(); g.arc(0, 0, r * k, 0, Math.PI * 2);
-        g.lineWidth = 1; g.strokeStyle = rgba(MINT, a); g.stroke();
-      }
-    });
-    dialSprite = sprite(size, (g) => {
-      g.lineWidth = 1;
-      for (let k = 0; k < 180; k++) {
-        const a = (k / 180) * Math.PI * 2;
-        const major = k % 15 === 0, minor = k % 5 === 0;
-        const r0 = r * 1.085, r1 = r0 + (major ? 11 : minor ? 6 : 3);
-        g.strokeStyle = major ? "rgba(207,211,207,0.5)" : "rgba(207,211,207,0.2)";
-        g.beginPath(); g.moveTo(Math.cos(a) * r0, Math.sin(a) * r0); g.lineTo(Math.cos(a) * r1, Math.sin(a) * r1); g.stroke();
-      }
-      g.fillStyle = "rgba(160,215,209,0.22)";
-      for (let k = 0; k < 120; k++) {
-        const a = (k / 120) * Math.PI * 2;
-        g.fillRect(Math.cos(a) * r * 0.88 - 0.6, Math.sin(a) * r * 0.88 - 0.6, 1.2, 1.2);
-      }
-    });
-    // One atlas holds every soft dot, so particles, trails and glows draw from a single texture.
-    atlas = document.createElement("canvas");
-    atlas.width = Math.ceil(CELL * dpr) * DOTS.length; atlas.height = Math.ceil(CELL * dpr);
-    const ag = atlas.getContext("2d");
-    DOTS.forEach((c, i) => {
-      const x = (i + 0.5) * Math.ceil(CELL * dpr), y = atlas.height / 2, rr = atlas.height / 2;
-      const grd = ag.createRadialGradient(x, y, 0, x, y, rr);
-      const white = i === WHITE;
-      grd.addColorStop(0, rgba(c, 1));
-      grd.addColorStop(white ? 0.3 : 0.18, rgba(c, white ? 0.7 : 0.55));
-      grd.addColorStop(white ? 0.6 : 0.45, rgba(c, white ? 0.12 : 0.14));
-      grd.addColorStop(1, rgba(c, 0));
-      ag.fillStyle = grd; ag.fillRect(x - rr, y - rr, rr * 2, rr * 2);
-    });
-    // The sweep: an arc brightening towards its head, rotated each frame.
-    sweepSprite = sprite(r * 2.3, (g) => {
-      const span = Math.PI * 2 * 0.13, n = 48;
-      for (let i = 0; i < n; i++) {
-        const f = (i + 1) / n;
-        g.beginPath(); g.arc(0, 0, r, (i / n) * span, ((i + 1) / n) * span);
-        g.strokeStyle = rgba(LIME, 0.18 * f); g.lineWidth = r * 0.06; g.stroke();
-        g.strokeStyle = rgba(LIME, 0.9 * f); g.lineWidth = Math.max(2, r * 0.013); g.stroke();
-      }
-    });
-    const { rc } = L;
-    coreSprite = sprite(rc * 2 + 6, (g) => {
-      const disc = g.createRadialGradient(0, -rc * 0.4, 0, 0, 0, rc);
-      disc.addColorStop(0, "#132222");
-      disc.addColorStop(1, "#070e0e");
-      g.fillStyle = disc;
-      g.beginPath(); g.arc(0, 0, rc, 0, Math.PI * 2); g.fill();
-      g.beginPath(); g.arc(0, 0, rc * 0.8, 0, Math.PI * 2);
-      g.lineWidth = 1; g.strokeStyle = "rgba(255,255,255,0.07)"; g.stroke();
-      if (mark.complete && mark.naturalWidth) {
-        const mh = rc * 0.95, mw = (mh * mark.naturalWidth) / mark.naturalHeight;
-        g.drawImage(mark, -mw / 2, -mh / 2, mw, mh);
-      }
-    });
-    coreRing = sprite(rc * 2 + 24, (g) => {
-      g.beginPath(); g.arc(0, 0, rc, 0, Math.PI * 2);
-      g.shadowColor = rgba(LIME, 0.8); g.shadowBlur = 8;
-      g.lineWidth = 1.5; g.strokeStyle = rgba(LIME, 1); g.stroke();
-    });
-  }
+  function paintBase() {
+    const b = new Uint32Array(GW * GH);
+    const { nightSky, ground, grid, gridHi, star } = PAL;
+    const X = L.cx * sx, Y = L.cy * sy, R = L.r * sx, RC = L.rc * sx;
+    const HZ = Math.min(GH - 1, Math.round(L.horizon * sy));
 
-  function stamp(g, i, x, y, size, alpha) {
-    const s = atlas.height;
-    g.globalAlpha = alpha;
-    g.drawImage(atlas, i * s, 0, s, s, x - size / 2, y - size / 2, size, size);
-  }
-  function blit(g, img, x, y, alpha) {
-    const s = img.width / dpr;
-    g.globalAlpha = alpha;
-    g.drawImage(img, x - s / 2, y - s / 2, s, s);
-  }
+    // Sky: a teal glow behind the lens and along the horizon; darker glass inside the lens
+    for (let y = 0; y < HZ; y++) {
+      const v = y / HZ;
+      for (let x = 0; x < GW; x++) {
+        const dx = (x - X) / (R * 2.1), dy = (y - Y) / (R * 1.9);
+        const hx = (x - X) / (GW * 0.5), hy = (y - HZ) / (GH * 0.12);
+        const d = Math.hypot(x + 0.5 - X, y + 0.5 - Y);
+        let t = Math.pow(v, 2.2) * 0.3 + Math.exp(-(dx * dx + dy * dy)) * 0.3 + Math.exp(-(hx * hx + hy * hy)) * 0.3;
+        if (d < R) t = t * 0.55 + Math.pow(d / R, 7) * 0.24;
+        b[y * GW + x] = dither(nightSky, t, x, y);
+      }
+    }
 
-  /* ---------------- Backdrop ---------------- */
+    // Ground with perspective ledger lines converging under the lens
+    for (let y = HZ; y < GH; y++) {
+      const v = (y - HZ) / Math.max(1, GH - HZ);
+      for (let x = 0; x < GW; x++) {
+        const dx = (x - X) / (GW * 0.5);
+        const glow = Math.exp(-(dx * dx) / 0.3) * Math.max(0, 1 - v * 2.2);
+        b[y * GW + x] = dither(ground, 0.85 - v * 0.7 + glow * 0.6, x, y);
+      }
+    }
+    const rays = 20;
+    for (let i = 0; i <= rays; i++) {
+      const bx = (i / rays) * GW * 3 - GW;
+      for (let y = HZ + 1; y < GH; y++) {
+        const v = (y - HZ) / (GH - HZ);
+        const x = Math.round(X + (bx - X) * v);
+        if (x >= 0 && x < GW && bayer(x, y) < 0.85) b[y * GW + x] = i === rays / 2 ? gridHi : grid;
+      }
+    }
+    for (let k = 1; k < 14; k++) {
+      const y = Math.round(HZ + Math.pow(k / 14, 2.1) * (GH - HZ));
+      for (let x = 0; x < GW; x++) if (y < GH && bayer(x, y) < 0.55) b[y * GW + x] = grid;
+    }
 
-  function glow(g, x, y, rx, ry, stops) {
-    g.save();
-    g.translate(x, y); g.scale(1, ry / rx);
-    const grd = g.createRadialGradient(0, 0, 0, 0, 0, rx);
-    for (const [o, c] of stops) grd.addColorStop(o, c);
-    g.fillStyle = grd;
-    g.fillRect(-rx, -rx, rx * 2, rx * 2);
-    g.restore();
-  }
+    // The lens and its core mirrored in the floor, fading with depth
+    const deep = R * 1.3;
+    for (let y = HZ + 1; y < Math.min(GH, HZ + deep); y++) {
+      const fade = 1 - (y - HZ) / deep;
+      const my = 2 * HZ - y + 0.5;
+      for (let x = Math.max(0, Math.floor(X - R - 2)); x < Math.min(GW, X + R + 2); x++) {
+        const d = Math.hypot(x + 0.5 - X, my - Y);
+        if (Math.abs(d - R) < 0.9 && bayer(x, y) < 0.6 * fade) b[y * GW + x] = dither(nightSky, 0.42 + 0.2 * fade, x, y);
+        else if (Math.abs(d - RC) < 0.8 && bayer(x, y) < 0.7 * fade) b[y * GW + x] = LIME[1];
+      }
+    }
 
-  function drawBack() {
-    const g = bctx;
-    const { cx, cy, r, horizon } = L;
-    g.setTransform(dpr, 0, 0, dpr, 0, 0);
-    g.globalCompositeOperation = "source-over";
-    const sky = g.createLinearGradient(0, 0, 0, H);
-    const hz = clamp(horizon / H, 0.1, 0.95);
-    sky.addColorStop(0, "#050a0a");
-    sky.addColorStop(hz * 0.55, "#081111");
-    sky.addColorStop(hz, "#0e2020");
-    sky.addColorStop(Math.min(1, hz + 0.02), "#0a1515");
-    sky.addColorStop(1, "#040808");
-    g.fillStyle = sky;
-    g.fillRect(0, 0, W, H);
+    // Horizon line, brightest under the lens
+    for (let x = 0; x < GW; x++) {
+      const k = 1 - Math.abs(x - X) / (GW * 0.55);
+      if (bayer(x, HZ) < k) b[HZ * GW + x] = dither(nightSky, 0.55 + 0.35 * k, x, HZ);
+    }
 
-    g.globalCompositeOperation = "lighter";
-    glow(g, cx, horizon, W * 0.75, r * 0.9, [[0, "rgba(70,170,158,0.22)"], [0.45, "rgba(40,110,104,0.08)"], [1, "rgba(0,0,0,0)"]]);
-    glow(g, cx, cy, r * 2.4, r * 2.4, [[0, "rgba(192,255,1,0.07)"], [0.35, "rgba(111,227,210,0.05)"], [1, "rgba(0,0,0,0)"]]);
-    glow(g, W * 0.12, H * 0.08, W * 0.45, W * 0.3, [[0, "rgba(65,161,207,0.07)"], [1, "rgba(0,0,0,0)"]]);
-    glow(g, W * 0.95, H * 0.02, W * 0.35, W * 0.25, [[0, "rgba(111,227,210,0.05)"], [1, "rgba(0,0,0,0)"]]);
-
-    // stars, thinning towards the horizon
+    // Stars, thinning towards the horizon
     const rand = rng(11);
-    const count = Math.round((W * horizon) / 5200);
-    for (let i = 0; i < count; i++) {
-      const x = rand() * W, y = rand() * (horizon - 24);
-      const fade = clamp((horizon - 24 - y) / (horizon * 0.5), 0, 1);
-      const s = rand() < 0.08 ? 1.6 : rand() < 0.4 ? 1.1 : 0.7;
-      g.fillStyle = `rgba(226,240,236,${(0.12 + rand() * 0.55) * fade})`;
-      g.fillRect(x, y, s, s);
+    stars = [];
+    for (let i = 0, n = Math.round((GW * HZ) / 240); i < n; i++) {
+      const x = Math.floor(rand() * GW), y = Math.floor(Math.pow(rand(), 1.5) * HZ * 0.85);
+      if (Math.hypot(x - X, y - Y) < R + 6) continue;
+      stars.push({ x, y, p: rand() * 6.28, s: 0.4 + rand() * 1.2, b: rand() });
     }
 
-    // horizon line and the light it spills
-    const line = g.createLinearGradient(0, 0, W, 0);
-    line.addColorStop(0, "rgba(160,215,209,0)");
-    line.addColorStop(clamp(cx / W, 0.1, 0.9), "rgba(200,240,220,0.5)");
-    line.addColorStop(1, "rgba(160,215,209,0)");
-    g.fillStyle = line;
-    g.fillRect(0, horizon - 0.5, W, 1);
-    const band = g.createLinearGradient(0, horizon - 70, 0, horizon);
-    band.addColorStop(0, "rgba(111,227,210,0)");
-    band.addColorStop(1, "rgba(111,227,210,0.06)");
-    g.fillStyle = band;
-    g.fillRect(0, horizon - 70, W, 70);
+    // Lane guides: sparse dots going in, denser class coloured dots coming out
+    const dots = (lane, every, c) => {
+      for (let d = 0; d <= lane.len; d += every) { at(lane, d, tmp); put(b, tmp[0] * sx, tmp[1] * sy, c); }
+    };
+    for (const lane of lanesIn) dots(lane, 3 / sx, NEUTRAL[1]);
+    lanesOut.forEach((lane, j) => dots(lane, 2 / sx, OUT[j].px[1]));
 
-    // lens glass
-    g.globalCompositeOperation = "source-over";
-    const disc = g.createRadialGradient(cx, cy, 0, cx, cy, r);
-    disc.addColorStop(0, "rgba(4,9,9,0.4)");
-    disc.addColorStop(0.7, "rgba(8,18,18,0.35)");
-    disc.addColorStop(1, "rgba(111,227,210,0.1)");
-    g.fillStyle = disc;
-    g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.fill();
-
-    // ring and dial, with the ring mirrored in the floor
-    const s = ringSprite.width / dpr;
-    g.drawImage(dialSprite, cx - s / 2, cy - s / 2, s, s);
-    g.drawImage(ringSprite, cx - s / 2, cy - s / 2, s, s);
-    g.save();
-    g.beginPath(); g.rect(0, horizon, W, H - horizon); g.clip();
-    g.globalAlpha = 0.12;
-    g.translate(cx, 2 * horizon - cy); g.scale(1, -1);
-    g.drawImage(ringSprite, -s / 2, -s / 2, s, s);
-    g.restore();
-    g.save();
-    g.beginPath(); g.rect(0, horizon, W, H - horizon); g.clip();
-    g.translate(0, 2 * horizon); g.scale(1, -1);
-    drawCore(g, 0.22);
-    g.restore();
-    const fade = g.createLinearGradient(0, horizon, 0, horizon + r * 1.4);
-    fade.addColorStop(0, "rgba(10,21,21,0)");
-    fade.addColorStop(1, "rgba(10,21,21,1)");
-    g.fillStyle = fade;
-    g.fillRect(0, horizon + 0.5, W, r * 1.4);
-    const floor = g.createLinearGradient(0, horizon + r * 1.4, 0, H);
-    floor.addColorStop(0, "#0a1515");
-    floor.addColorStop(1, "#040808");
-    g.fillStyle = floor;
-    g.fillRect(0, horizon + r * 1.4, W, Math.max(0, H - horizon - r * 1.4));
-
-    // a pool of light on the floor under the lens
-    g.globalCompositeOperation = "lighter";
-    glow(g, cx, horizon + r * 0.35, r * 1.6, r * 0.45, [[0, "rgba(192,255,1,0.05)"], [0.5, "rgba(111,227,210,0.04)"], [1, "rgba(0,0,0,0)"]]);
-    g.globalCompositeOperation = "source-over";
-
-    drawFloor(g);
-
-    // lane guides: dotted going in, solid coming out
-    g.lineWidth = 1;
-    g.setLineDash([1, 5]);
-    g.strokeStyle = "rgba(226,234,230,0.13)";
-    for (const lane of lanesIn) strokeLane(g, lane);
-    g.setLineDash([]);
-    lanesOut.forEach((lane, j) => { g.strokeStyle = rgba(OUT[j].rgb, 0.14); strokeLane(g, lane); });
-
-    drawCore(g, 1);
-
-    // vignette
-    glow(g, W / 2, H * 0.45, Math.max(W, H) * 0.8, Math.max(W, H) * 0.8, [[0.55, "rgba(0,0,0,0)"], [1, "rgba(0,0,0,0.45)"]]);
-  }
-
-  // A perspective field of dots, lit lime under the lens and fading into the distance.
-  function drawFloor(g) {
-    const { cx, horizon, r } = L;
-    const zNear = 1.6, rows = 30, dz = 0.6;
-    const f = (H + 12 - horizon) * zNear;
-    const sp = (L.wide ? 24 : 18) / (f / zNear);
-    const size0 = L.wide ? 1.9 : 1.6;
-    for (const [color, pass] of [["#8fcfc6", 0], ["#c0ff01", 1]]) {
-      g.fillStyle = color;
-      for (let j = 0; j < rows / dz; j++) {
-        const z = zNear + (j + 0.65) * dz;
-        const sy0 = horizon + f / z;
-        if (sy0 > H + 20) continue;
-        const fog = Math.pow(1 - (z - zNear) / (rows + 1), 1.5) * clamp((sy0 - horizon) / 26, 0, 1);
-        const lod = z < 4 ? 1 : z < 8 ? 2 : z < 16 ? 4 : 8;
-        const span = ((W / 2 + 40) * z) / f;
-        const i0 = Math.ceil(-span / sp / lod) * lod, i1 = Math.floor(span / sp / lod) * lod;
-        const sz = Math.max(1, ((size0 * zNear) / z) * 1.4);
-        for (let i = i0; i <= i1; i += lod) {
-          const X = i * sp;
-          const wave = Math.sin(X * 0.9 + z * 0.55) * 0.05 + Math.sin(X * 0.37 - z * 0.8) * 0.035;
-          const sx = cx + (f * X) / z, sy = sy0 - (f * wave) / z;
-          const dx = (sx - cx) / (r * 1.5);
-          const lit = Math.exp(-dx * dx);
-          const a = pass ? fog * lit * 0.6 : fog * (0.22 + 0.4 * lit) * (1 - lit * 0.5);
-          if (a < 0.02) continue;
-          g.globalAlpha = Math.min(0.72, a);
-          g.fillRect(sx - sz / 2, sy - sz / 2, sz, sz);
-        }
+    // The ring: lime at the top right, mint elsewhere, dithered between the two, with a sparse glow
+    for (let y = Math.max(0, Math.floor(Y - R - 5)); y < Math.min(HZ, Y + R + 5); y++) {
+      for (let x = Math.max(0, Math.floor(X - R - 5)); x < Math.min(GW, X + R + 5); x++) {
+        const d = Math.hypot(x + 0.5 - X, y + 0.5 - Y), band = Math.abs(d - R);
+        const th = Math.atan2(y + 0.5 - Y, x + 0.5 - X);
+        const lime = Math.pow(0.5 + 0.5 * Math.cos(th + Math.PI / 4), 2.2);
+        const lit = 0.5 - 0.5 * Math.sin(th);
+        if (band < 0.85) b[y * GW + x] = bayer(x, y) < lime ? LIME[3 + Math.round(lit * 2)] : dither(nightSky, 0.72 + 0.28 * lit, x, y);
+        else if (band < 3.4 && bayer(x, y) < (1 - (band - 0.85) / 2.55) * 0.42) b[y * GW + x] = dither(nightSky, 0.48 + 0.14 * lit, x, y);
       }
     }
-    g.globalAlpha = 1;
-  }
 
-  function strokeLane(g, lane) {
-    const p = lane.pts;
-    g.beginPath(); g.moveTo(p[0], p[1]);
-    for (let i = 2; i < p.length; i += 6) g.lineTo(p[i], p[i + 1]);
-    g.lineTo(p[p.length - 2], p[p.length - 1]);
-    g.stroke();
+    // Dial ticks outside the ring and a dotted circle inside it
+    for (let k = 0; k < 120; k++) {
+      const a = (k / 120) * Math.PI * 2, len = k % 10 === 0 ? 3 : k % 5 === 0 ? 2 : 1;
+      for (let j = 0; j < len; j++) {
+        const rad = R * 1.08 + 2 + j;
+        put(b, X + Math.cos(a) * rad, Y + Math.sin(a) * rad, k % 10 === 0 ? star[3] : star[1]);
+      }
+    }
+    const inner = R * 0.88, count = Math.round((Math.PI * 2 * inner) / 4);
+    for (let k = 0; k < count; k++) {
+      const a = (k / count) * Math.PI * 2;
+      put(b, X + Math.cos(a) * inner, Y + Math.sin(a) * inner, nightSky[6]);
+    }
+
+    // The core: a dark disc lit from above, a lime rim and the mark
+    rim = [];
+    for (let y = Math.floor(Y - RC - 3); y < Y + RC + 3; y++) {
+      for (let x = Math.floor(X - RC - 3); x < X + RC + 3; x++) {
+        const d = Math.hypot(x + 0.5 - X, y + 0.5 - Y);
+        if (d < RC - 0.7) put(b, x, y, dither(CORE, 0.95 - ((y - (Y - RC)) / (2 * RC)) * 0.8, x, y));
+        else if (d < RC + 0.7) { put(b, x, y, LIME[3]); rim.push(x, y); }
+        else if (d < RC + 2.6 && bayer(x, y) < 0.3) put(b, x, y, LIME[1]);
+      }
+    }
+    const mp = markPixels(Math.max(12, Math.round(RC * 1.2)));
+    for (let i = 0; i < mp.length; i += 3) put(b, X + mp[i], Y + mp[i + 1], LIME[mp[i + 2]]);
+
+    return b;
   }
 
   /* ---------------- Labels ---------------- */
@@ -496,112 +370,93 @@
 
   /* ---------------- Frame ---------------- */
 
-  function drawSweep(t) {
-    const a = still ? -0.6 : (t * 0.0007) % (Math.PI * 2);
-    ctx.save();
-    ctx.globalCompositeOperation = "lighter";
-    ctx.translate(L.cx, L.cy); ctx.rotate(a);
-    blit(ctx, sweepSprite, 0, 0, 1);
-    ctx.restore();
+  function drawStars(t) {
+    for (const s of stars) {
+      const tw = 0.5 + 0.5 * Math.sin(t * 0.001 * s.s + s.p);
+      const lvl = s.b * 0.6 + tw * 0.4;
+      if (lvl > 0.35) buf[s.y * GW + s.x] = PAL.star[Math.min(4, Math.floor(lvl * 5))];
+    }
   }
 
-  // Each particle is a head and a trail of fading dots stamped from the atlas.
+  // A lime sweep runs round the ring, brightest at its head.
+  function drawSweep(t) {
+    const X = L.cx * sx, Y = L.cy * sy, R = L.r * sx;
+    const a = still ? -0.6 : (t * 0.0007) % (Math.PI * 2);
+    const span = Math.PI * 2 * 0.13, n = Math.ceil(span * R * 1.6);
+    for (let i = 0; i <= n; i++) {
+      const f = i / n, th = a + span * f;
+      const x = Math.floor(X + Math.cos(th) * R), y = Math.floor(Y + Math.sin(th) * R);
+      if (f < 0.35 && bayer(x, y) > f / 0.35) continue;
+      put(buf, x, y, LIME[Math.min(5, 1 + Math.round(f * 4.4))]);
+    }
+  }
+
+  // Each particle is a head pixel and a trail that steps down its ramp and dithers out.
   function drawParticles() {
-    ctx.globalCompositeOperation = "lighter";
     const h = hop();
     for (const p of parts) {
       const A = lanesIn[p.a].len;
+      const hidden = (d) => d > A - 2 && d < A + h + 2;
       const tail = Math.min(p.tail, p.d);
-      const n = Math.min(16, Math.ceil(tail / 3.5));
-      for (let k = n; k >= 1; k--) {
+      const n = Math.max(1, Math.round(tail * sx));
+      for (let k = n; k >= 0; k--) {
         const d = p.d - (tail * k) / n;
-        if (d > A - 2 && d < A + h + 2) continue;
-        const sorted = d > A + h;
-        const f = 1 - k / (n + 1);
+        if (hidden(d)) continue;
         place(p, d, tmp);
-        stamp(ctx, sorted ? p.b : NEUTRAL_I, tmp[0], tmp[1], (6 + p.w * 3) * (0.5 + f * 0.5), (sorted ? 0.5 : 0.36) * f);
+        const x = Math.floor(tmp[0] * sx), y = Math.floor(tmp[1] * sy);
+        const f = 1 - k / (n + 1);
+        if (k > 0 && bayer(x, y) > f + 0.2) continue;
+        const r = d > A + h ? OUT[p.b].px : NEUTRAL;
+        put(buf, x, y, k === 0 ? r[5] : r[Math.max(1, Math.round(4 * f))]);
       }
-      if (p.d > A - 2 && p.d < A + h + 2) continue;
-      const sorted = p.d > A + h;
+      if (hidden(p.d) || p.d <= A + h) continue;
+      // sorted transfers get a small cross of light around the head
       place(p, p.d, pos);
-      stamp(ctx, sorted ? p.b : NEUTRAL_I, pos[0], pos[1], sorted ? 15 + p.w * 6 : 10 + p.w * 4, sorted ? 1 : 0.8);
-      stamp(ctx, WHITE, pos[0], pos[1], 4 + p.w * 1.5, 0.95);
+      const x = Math.floor(pos[0] * sx), y = Math.floor(pos[1] * sy), c = OUT[p.b].px[2];
+      put(buf, x - 1, y, c); put(buf, x + 1, y, c); put(buf, x, y - 1, c); put(buf, x, y + 1, c);
     }
-    ctx.globalAlpha = 1;
-    ctx.globalCompositeOperation = "source-over";
   }
 
-  function drawCore(g, alpha) {
-    const { cx, cy, rc } = L;
-    g.globalCompositeOperation = "lighter";
-    stamp(g, 0, cx, cy, rc * 7, 0.22 * alpha);
-    g.globalCompositeOperation = "source-over";
-    blit(g, coreSprite, cx, cy, alpha);
-    blit(g, coreRing, cx, cy, 0.5 * alpha);
-    g.globalAlpha = 1;
-  }
-
-  // Each transfer that crosses the core makes it flare for a moment.
+  // Each transfer that crosses the core makes its rim flare.
   function drawPulse() {
-    if (pulse < 0.02) return;
-    const { cx, cy, rc } = L;
-    ctx.globalCompositeOperation = "lighter";
-    stamp(ctx, 0, cx, cy, rc * 7, pulse * 0.35);
-    blit(ctx, coreRing, cx, cy, pulse * 0.6);
-    ctx.globalAlpha = 1;
-    ctx.globalCompositeOperation = "source-over";
-  }
-
-  function drawTwinkles(t) {
-    ctx.fillStyle = "#e8f4f0";
-    for (const s of stars) {
-      const v = 0.5 + 0.5 * Math.sin(t * s.sp + s.ph);
-      ctx.globalAlpha = 0.1 + 0.8 * v * v * v;
-      ctx.fillRect(s.x, s.y, s.s, s.s);
-    }
-    ctx.globalAlpha = 1;
+    if (pulse < 0.12) return;
+    const c = LIME[Math.min(5, 3 + Math.round(pulse * 2.4))];
+    for (let i = 0; i < rim.length; i += 2) put(buf, rim[i], rim[i + 1], c);
   }
 
   function step(dt) {
     const rate = L.wide ? 9 : 4.5;
     spawnDebt += rate * dt;
-    while (spawnDebt >= 1) { spawn(0); spawnDebt -= 1; }
+    while (spawnDebt >= 1) { spawn(); spawnDebt -= 1; }
     const { cx, cy, r } = L;
     for (let i = parts.length - 1; i >= 0; i--) {
       const p = parts[i];
       place(p, p.d, pos);
       const near = Math.hypot(pos[0] - cx, pos[1] - cy) / (r * 1.2);
       p.d += p.v * dt * (0.4 + 0.6 * clamp(near, 0, 1));
-      const A = lanesIn[p.a].len;
-      if (!p.crossed && p.d > A + hop() / 2) { p.crossed = true; pulse = Math.min(1, pulse + 0.22); }
+      if (!p.crossed && p.d > lanesIn[p.a].len + hop() / 2) { p.crossed = true; pulse = Math.min(1, pulse + 0.25); }
       if (p.d >= total(p)) { hit(p.b); parts.splice(i, 1); }
     }
     pulse *= Math.pow(0.08, dt);
   }
 
   function frame(t) {
-    ctx.setTransform(fdpr, 0, 0, fdpr, 0, -L.top * fdpr);
-    ctx.clearRect(0, L.top, W, L.band);
-    drawTwinkles(t);
+    buf.set(base);
+    drawStars(t);
     drawSweep(t);
     drawParticles();
     drawPulse();
+    ctx.putImageData(image, 0, 0);
   }
 
   function loop(t) {
     raf = 0;
     if (!visible || document.hidden) return;
     raf = requestAnimationFrame(loop);
-    const gap = last ? (t - last) / 1000 : 0;
-    if (lite && gap && gap < 1 / 32) return;
+    if (last && t - last < 1000 / FPS - 2) return;
+    const dt = last ? Math.min(0.1, (t - last) / 1000) : 0;
     last = t;
-    // Frames that keep arriving late for two seconds: drop to 30 fps and coarser canvases.
-    if (!lite && gap) {
-      frames++;
-      slow = gap > 1 / 45 ? slow + gap : Math.max(0, slow - gap);
-      if (frames > 40 && slow > 2) { lite = true; lastSize = ""; build(); }
-    }
-    step(Math.min(0.05, gap));
+    step(dt);
     frame(t);
   }
   function start() {
@@ -617,38 +472,23 @@
     const key = `${Math.round(W)}x${Math.round(H / 80)}`;
     if (key === lastSize) return;
     lastSize = key;
-    dpr = lite ? 1 : Math.min(window.devicePixelRatio || 1, 1.5);
-    fdpr = lite ? 0.5 : Math.min(window.devicePixelRatio || 1, 2) * 0.6;
-    back.width = Math.round(W * dpr); back.height = Math.round(H * dpr);
+    const cell = W < 640 ? 3 : 4;
+    GW = Math.max(32, Math.round(W / cell)); GH = Math.max(32, Math.round(H / cell));
+    sx = GW / W; sy = GH / H;
+    canvas.width = GW; canvas.height = GH;
+    image = ctx.createImageData(GW, GH);
+    buf = new Uint32Array(image.data.buffer);
 
     buildTags();
     L = layout(tagWidth());
     buildLanes();
-    // The animated canvas only spans the band the lanes, lens and dial occupy.
-    let lo = L.cy - L.r * 1.3, hi = L.cy + L.r * 1.3;
-    for (const lane of [...lanesIn, ...lanesOut]) {
-      for (let i = 1; i < lane.pts.length; i += 2) { lo = Math.min(lo, lane.pts[i]); hi = Math.max(hi, lane.pts[i]); }
-    }
-    L.top = Math.max(0, Math.floor(lo - 30));
-    L.band = Math.min(H, Math.ceil(hi + 30)) - L.top;
-    fx.style.top = `${L.top}px`;
-    fx.style.height = `${L.band}px`;
-    fx.width = Math.round(W * fdpr); fx.height = Math.round(L.band * fdpr);
-    buildSprites();
-    drawBack();
     placeTags();
-
-    const rand = rng(23);
-    stars = Array.from({ length: Math.round(W / 40) }, () => ({
-      x: rand() * W, y: L.top + rand() * Math.min(L.band, L.horizon - L.top - 20), s: rand() < 0.3 ? 2 : 1.5,
-      sp: 0.0006 + rand() * 0.0016, ph: rand() * 6.28,
-    }));
+    base = paintBase();
 
     // Fill the lanes at once, so the scene never starts empty.
     parts = [];
-    const alive = (L.wide ? 9 : 4.5) * 8;
-    for (let i = 0; i < alive; i++) {
-      spawn(0);
+    for (let i = 0, alive = (L.wide ? 9 : 4.5) * 8; i < alive; i++) {
+      spawn();
       const p = parts[parts.length - 1];
       p.d = Math.random() * total(p) * 0.98;
       p.crossed = p.d > lanesIn[p.a].len;
