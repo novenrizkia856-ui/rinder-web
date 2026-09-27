@@ -66,7 +66,11 @@ for (const file of files) {
   const rel = relative(root, file).replace(/\\/g, "/");
   if (rel === "tools/check-copy.mjs") continue;
   const source = readFileSync(file, "utf8");
-  for (const pattern of LEFTOVERS) if (pattern.test(source)) fail(`${rel}: matches ${pattern}`);
+  for (const pattern of LEFTOVERS) {
+    // CSS clip-path uses polygon(), which is not the chain
+    if (rel.endsWith(".css") && String(pattern) === "/polygon/i") continue;
+    if (pattern.test(source)) fail(`${rel}: matches ${pattern}`);
+  }
   if (/\.(js|mjs|html)$/.test(file) && rel !== "config.js" && !rel.startsWith("test/")) {
     const m = source.match(ADDRESS);
     if (m) fail(`${rel}: hardcoded Solana address ${m[1]}. Addresses belong in config.js.`);

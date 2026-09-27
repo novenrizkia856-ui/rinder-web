@@ -107,16 +107,14 @@
     return `<span class="cls cls--${c.family}"><span class="cls__glyph" aria-hidden="true">${cells}</span>${esc(c.label)}</span>`;
   }
 
-  /** Ring glyph: a full ring, half ring, dashed ring or dotted empty ring. */
+  /** Ring glyph, drawn on a 7 by 7 pixel grid: full ring with a core, half ring, dashed ring or sparse dots. */
+  const RING = [[2, 0], [3, 0], [4, 0], [5, 1], [6, 2], [6, 3], [6, 4], [5, 5], [4, 6], [3, 6], [2, 6], [1, 5], [0, 4], [0, 3], [0, 2], [1, 1]];
   function ringSvg(key, size = 14) {
-    const r = 5.5, c = 2 * Math.PI * r;
     const v = VERIFICATION[key];
-    const base = `<svg viewBox="0 0 14 14" width="${size}" height="${size}" fill="none" aria-hidden="true">`;
-    if (!v) return `${base}<circle cx="7" cy="7" r="${r}" stroke="currentColor" stroke-width="1.2" stroke-dasharray="1 2.2" opacity=".7"/></svg>`;
-    if (key === "UNVERIFIED") return `${base}<circle cx="7" cy="7" r="${r}" stroke="currentColor" stroke-width="1.2" stroke-dasharray="1 2.2"/></svg>`;
-    if (key === "STALE") return `${base}<circle cx="7" cy="7" r="${r}" stroke="currentColor" stroke-width="1.2" stroke-dasharray="3 2"/><rect x="6.4" y="4" width="1.2" height="3.4" fill="currentColor"/><rect x="6.4" y="6.4" width="2.6" height="1.2" fill="currentColor"/></svg>`;
-    const arc = v.fill * c;
-    return `${base}<circle cx="7" cy="7" r="${r}" stroke="currentColor" stroke-width="1.2" opacity=".22"/><circle cx="7" cy="7" r="${r}" stroke="currentColor" stroke-width="1.6" stroke-dasharray="${arc} ${c}" transform="rotate(-90 7 7)"/>${v.fill === 1 ? '<rect x="5" y="5" width="4" height="4" fill="currentColor"/>' : ""}</svg>`;
+    const on = (i) => !v ? i % 4 === 0 : key === "UNVERIFIED" ? i % 4 === 0 : key === "STALE" ? i % 4 < 2 : key === "PARTIALLY_VERIFIED" ? i < 8 : true;
+    const cells = RING.map(([x, y], i) => `<rect x="${x}" y="${y}" width="1" height="1"${on(i) ? "" : ' opacity=".22"'}/>`).join("");
+    const core = v && (key === "VERIFIED" || key === "PARTIALLY_VERIFIED") ? `<rect x="2" y="2" width="3" height="3"${key === "VERIFIED" ? "" : ' opacity=".45"'}/>` : key === "STALE" ? '<rect x="3" y="2" width="1" height="2"/><rect x="3" y="3" width="2" height="1"/>' : "";
+    return `<svg viewBox="0 0 7 7" width="${size}" height="${size}" fill="currentColor" shape-rendering="crispEdges" aria-hidden="true"${v ? "" : ' opacity=".7"'}>${cells}${core}</svg>`;
   }
 
   function vBadge(key) {

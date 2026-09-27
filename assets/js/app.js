@@ -257,8 +257,9 @@
       if (Math.abs(ax - bx) < 10) { s = centre(a, ay < by ? "b" : "t"); e = centre(b, ay < by ? "t" : "b"); }
       else if (vertical) { s = centre(a, "b"); e = centre(b, "t"); }
       else { s = centre(a, "r"); e = centre(b, "l"); }
-      const mx = (s[0] + e[0]) / 2, my = (s[1] + e[1]) / 2;
-      return vertical || Math.abs(ax - bx) < 10 ? `M${s[0]} ${s[1]} C${s[0]} ${my} ${e[0]} ${my} ${e[0]} ${e[1]}` : `M${s[0]} ${s[1]} C${mx} ${s[1]} ${mx} ${e[1]} ${e[0]} ${e[1]}`;
+      // Elbow connectors on whole pixels, the way a pixel UI routes a wire
+      const mx = Math.round((s[0] + e[0]) / 2), my = Math.round((s[1] + e[1]) / 2);
+      return vertical || Math.abs(ax - bx) < 10 ? `M${s[0]} ${s[1]} V${my} H${e[0]} V${e[1]}` : `M${s[0]} ${s[1]} H${mx} V${e[1]} H${e[0]}`;
     };
     let svg = `<defs><linearGradient id="scanGrad" x1="0" x2="1"><stop offset="0" stop-color="#0081c0" stop-opacity="0"/><stop offset="1" stop-color="#0081c0" stop-opacity=".1"/></linearGradient></defs>`;
     for (let gx = 0; gx <= W; gx += 20) svg += `<line class="grid" x1="${gx}" y1="0" x2="${gx}" y2="${H}"/>`;
@@ -267,14 +268,14 @@
     nodes.forEach((n, i) => {
       const [x, y] = pos[i];
       const nw = n.out && vertical ? 200 : w, nh = n.out ? 62 : h;
-      svg += `<g class="node${n.out ? " out" : ""}" data-step="${n.step}"><rect x="${x}" y="${y}" width="${nw}" height="${nh}" rx="8"/><text x="${x + 12}" y="${y + 20}">${esc(n.k)}</text><text class="t2" x="${x + 12}" y="${y + 38}">${esc(n.v)}</text>${n.out ? `<text x="${x + 12}" y="${y + 54}" style="font-size:9px;fill:#a0d7d1">${esc(coin ? coin.symbol : "")} · VERIFIED</text>` : ""}</g>`;
+      svg += `<g class="node${n.out ? " out" : ""}" data-step="${n.step}"><rect x="${x}" y="${y}" width="${nw}" height="${nh}" rx="8"/><text x="${x + 12}" y="${y + 20}">${esc(n.k)}</text><text class="t2" x="${x + 12}" y="${y + 38}">${esc(n.v)}</text>${n.out ? `<text x="${x + 12}" y="${y + 54}" style="font-size:8px;fill:#a0d7d1">${esc(coin ? coin.symbol : "")} · VERIFIED</text>` : ""}</g>`;
     });
     const by = vertical ? 400 : 300;
     const stepW = (W - 40) / STEPS.length;
     STEPS.forEach((s, i) => {
-      svg += `<g class="node" data-step="${i}"><rect x="${20 + i * stepW}" y="${by}" width="${stepW - 6}" height="3" rx="1.5" style="stroke:none;fill:#2c2c2c"/><text x="${20 + i * stepW}" y="${by + 22}" style="font-size:10px">${String(i + 1).padStart(2, "0")}${vertical ? "" : ` ${esc(s.title.toUpperCase())}`}</text></g>`;
+      svg += `<g class="node" data-step="${i}"><rect x="${20 + i * stepW}" y="${by}" width="${stepW - 6}" height="4" style="stroke:none;fill:#2c2c2c"/><text x="${20 + i * stepW}" y="${by + 22}" style="font-size:8px">${String(i + 1).padStart(2, "0")}${vertical ? "" : ` ${esc(s.title.toUpperCase())}`}</text></g>`;
     });
-    if (!still) svg += `<circle class="pulse" r="3.5" data-pulse><animateMotion dur="1.6s" repeatCount="indefinite" rotate="auto"><mpath href="#pe0"/></animateMotion></circle>`;
+    if (!still) svg += `<rect class="pulse" x="-4" y="-4" width="8" height="8" data-pulse><animateMotion dur="1.6s" repeatCount="indefinite"><mpath href="#pe0"/></animateMotion></rect>`;
     return { svg, viewBox: `0 0 ${W} ${H}` };
   }
 
@@ -452,7 +453,7 @@
     const max = Math.max(...coins.map((c) => demo.stablecoinStats?.[c.symbol]?.merchants || 0));
     set("stablecoin", `<span class="mini glass-light">${coins.map((c) => { const v = (demo.stablecoinStats?.[c.symbol]?.merchants || 0) / max; return `<span class="mini__row"><span class="mini__name" style="width:52px">${esc(c.symbol)}</span><span class="mini__bar"><i style="--v:${v.toFixed(3)}"></i></span></span>`; }).join("")}<span class="mini__row"><span class="mini__muted">Known merchants</span><span class="mini__muted">demo</span></span></span>`);
     const pts = [[20, 20], [60, 12], [110, 18], [30, 66], [80, 74], [118, 60]];
-    set("provider", `<span class="mini glass-light"><svg class="mini__graph" viewBox="0 0 140 86" aria-hidden="true">${pts.map(([x, y]) => `<line x1="70" y1="43" x2="${x}" y2="${y}"/>`).join("")}${pts.map(([x, y]) => `<circle cx="${x}" cy="${y}" r="4"/>`).join("")}<circle class="hub" cx="70" cy="43" r="7"/>${still ? "" : pts.slice(0, 3).map(([x, y], i) => `<circle class="dot" r="2"><animateMotion dur="${2 + i * 0.6}s" repeatCount="indefinite" path="M${x} ${y} L70 43"/></circle>`).join("")}</svg><span class="mini__row"><span class="mini__name">${esc(p.name)}</span><span class="mini__muted">${R.formatNumber(p.merchants)} merchants</span></span></span>`);
+    set("provider", `<span class="mini glass-light"><svg class="mini__graph" viewBox="0 0 140 86" aria-hidden="true">${pts.map(([x, y]) => `<line x1="70" y1="43" x2="${x}" y2="${y}"/>`).join("")}${pts.map(([x, y]) => `<rect x="${x - 4}" y="${y - 4}" width="8" height="8"/>`).join("")}<rect class="hub" x="63" y="36" width="14" height="14"/>${still ? "" : pts.slice(0, 3).map(([x, y], i) => `<rect class="dot" x="-2" y="-2" width="4" height="4"><animateMotion dur="${2 + i * 0.6}s" repeatCount="indefinite" path="M${x} ${y} L70 43"/></rect>`).join("")}</svg><span class="mini__row"><span class="mini__name">${esc(p.name)}</span><span class="mini__muted">${R.formatNumber(p.merchants)} merchants</span></span></span>`);
   }
 
   function profileMerchant(m) {
@@ -566,7 +567,8 @@
     for (let y = 0; y <= 380; y += 20) svg += `<line class="grid" x1="0" y1="${y}" x2="560" y2="${y}"/>`;
     E.forEach(([a, sa, b, sb, flow], i) => {
       const [x1, y1] = c(a, sa), [x2, y2] = c(b, sb);
-      const d = sa === "r" || sa === "l" ? `M${x1} ${y1} C${(x1 + x2) / 2} ${y1} ${(x1 + x2) / 2} ${y2} ${x2} ${y2}` : `M${x1} ${y1} C${x1} ${(y1 + y2) / 2} ${x2} ${(y1 + y2) / 2} ${x2} ${y2}`;
+      const mx = Math.round((x1 + x2) / 2), my = Math.round((y1 + y2) / 2);
+      const d = sa === "r" || sa === "l" ? `M${x1} ${y1} H${mx} V${y2} H${x2}` : `M${x1} ${y1} V${my} H${x2} V${y2}`;
       svg += `<path id="me${i}" class="e${flow ? " flow" : ""}" d="${d}"/>`;
     });
     N.forEach((n) => (svg += `<g class="n${n.hl ? " hl" : ""}${n.out ? " out" : ""}"><rect x="${n.x}" y="${n.y}" width="${W}" height="${H}" rx="8"/><text class="k" x="${n.x + 12}" y="${n.y + 19}">${esc(n.k)}</text><text class="v" x="${n.x + 12}" y="${n.y + 36}">${esc(n.v)}</text></g>`));
@@ -616,11 +618,25 @@
     if (!seal) return;
     const keys = Object.keys(R.VERIFICATION);
     const colors = { VERIFIED: "var(--v-verified)", PARTIALLY_VERIFIED: "var(--v-partial)", STALE: "var(--v-stale)", UNVERIFIED: "var(--v-unverified)" };
-    const r = 92, C = 2 * Math.PI * r;
+    // A pixel seal: the ring is rasterized onto an 8 unit grid, lit clockwise from the top
+    const cells = [];
+    for (let gy = 0; gy < 30; gy++) for (let gx = 0; gx < 30; gx++) {
+      const cx = gx * 8 + 4 - 120, cy = gy * 8 + 4 - 120, d = Math.hypot(cx, cy);
+      if (d > 84 && d < 100) cells.push({ x: gx * 8, y: gy * 8, t: ((Math.atan2(cx, -cy) / (Math.PI * 2)) + 1) % 1 });
+    }
+    cells.sort((a, b) => a.t - b.t);
     let ticks = "";
-    for (let i = 0; i < 60; i++) { const a = (i / 60) * Math.PI * 2; const r1 = i % 5 ? 108 : 104; ticks += `<line class="tick" x1="${120 + Math.cos(a) * r1}" y1="${120 + Math.sin(a) * r1}" x2="${120 + Math.cos(a) * 112}" y2="${120 + Math.sin(a) * 112}" stroke-width="1"/>`; }
-    seal.innerHTML = `${ticks}<circle class="track" cx="120" cy="120" r="${r}" fill="none" stroke-width="10"/><circle class="arc" cx="120" cy="120" r="${r}" fill="none" stroke-width="10" transform="rotate(-90 120 120)" stroke-dasharray="0 ${C}"/><circle class="sweep" cx="120" cy="120" r="74" fill="none" stroke-width="1" stroke-dasharray="2 6"/><g class="core"><rect x="104" y="104" width="32" height="32"/></g>`;
-    const arc = $(".arc", seal), core = $(".core", seal);
+    for (let i = 0; i < 60; i++) {
+      const a = (i / 60) * Math.PI * 2, rr = 112;
+      ticks += `<rect class="tk${i % 5 ? "" : " major"}" x="${Math.round((120 + Math.sin(a) * rr) / 4) * 4 - 2}" y="${Math.round((120 - Math.cos(a) * rr) / 4) * 4 - 2}" width="4" height="4"/>`;
+    }
+    let sweep = "";
+    for (let i = 0; i < 24; i++) { const a = (i / 24) * Math.PI * 2; sweep += `<rect x="${Math.round(120 + Math.sin(a) * 70) - 2}" y="${Math.round(120 - Math.cos(a) * 70) - 2}" width="4" height="4"/>`; }
+    seal.innerHTML = `${ticks}<g class="ring">${cells.map((c, i) => `<rect class="cell" style="--d:${i}" x="${c.x}" y="${c.y}" width="8" height="8"/>`).join("")}</g><g class="sweep">${sweep}</g><g class="core"><rect x="104" y="104" width="32" height="32"/></g>`;
+    const ring = $$(".cell", seal);
+    const core = $(".core", seal);
+    // Which ring cells light up per state: full, half, dashed in runs, or sparse dots
+    const lit = (k, i, n) => k === "VERIFIED" ? true : k === "PARTIALLY_VERIFIED" ? i < n / 2 : k === "STALE" ? i % 6 < 4 : i % 6 === 0;
     list.innerHTML = keys.map((k) => `<li><button type="button" role="tab" class="state vb--${k}" aria-selected="false" data-state="${k}"><span class="state__glyph">${R.ringSvg(k, 16)}</span><span class="state__name">${esc(R.VERIFICATION[k].label)}</span><span class="state__desc">${esc(R.VERIFICATION[k].desc)}</span></button></li>`).join("");
 
     let current = 0, hold = 0;
@@ -631,8 +647,7 @@
       label.style.setProperty("--sc", colors[k]);
       label.textContent = v.label;
       seal.setAttribute("aria-label", `Verification state: ${v.label}`);
-      arc.setAttribute("stroke-dasharray", k === "STALE" ? "14 10" : k === "UNVERIFIED" ? "2 12" : `${v.fill * C} ${C}`);
-      arc.style.opacity = k === "UNVERIFIED" ? "0.8" : k === "STALE" ? "0.75" : "1";
+      ring.forEach((c, n) => c.classList.toggle("on", lit(k, n, ring.length)));
       core.style.opacity = k === "VERIFIED" ? "1" : k === "PARTIALLY_VERIFIED" ? "0.45" : "0";
       core.style.transform = k === "VERIFIED" ? "scale(1)" : "scale(0.6)";
       $$(".state", list).forEach((b, n) => b.setAttribute("aria-selected", n === i ? "true" : "false"));
