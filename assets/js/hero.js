@@ -119,15 +119,13 @@
     const cardTop = card ? vh - (wide ? 24 : 16) - card.offsetHeight : vh * 0.6;
     const L = { wide, tags: W >= 1200 };
     if (wide) {
-      // Fit the lens between the card on the left and the label column on the right.
-      const avail = Math.max(320, vh - top - 36);
-      const left = card ? card.offsetLeft + card.offsetWidth + 24 : W * 0.35;
+      // The card sits centred at the bottom, so the lens fits between the title and the card.
+      const avail = Math.max(150, cardTop - top - 16);
       L.colX = L.tags ? W - 40 - tagW : W + 20;
-      L.r = clamp(Math.min(W * 0.155, avail * 0.4, (L.colX - left) / 3.05), 140, 330);
+      L.r = clamp(Math.min(W * 0.155, avail * 0.4, (L.colX - W * 0.5) / 1.95), 64, 330);
       L.cy = top + avail * 0.5;
-      const lo = left + L.r * 1.15, hi = L.colX - L.r * 1.95;
-      L.cx = lo > hi ? (lo + hi) / 2 : clamp(W * 0.56, lo, hi);
-      L.gap = clamp(avail * 0.09, 42, 62);
+      L.cx = Math.min(W * 0.5, L.colX - L.r * 1.95);
+      L.gap = clamp(avail * 0.09, 34, 62);
     } else {
       const avail = Math.max(200, cardTop - top - 12);
       L.r = clamp(Math.min(W * 0.27, avail * 0.42), 70, 220);
