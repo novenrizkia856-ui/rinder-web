@@ -28,6 +28,8 @@
 
   const clean = (v) => (typeof v === "string" ? v.trim() : "");
   const address = (v) => (isSolanaAddress(clean(v)) ? clean(v) : "");
+  // The token CA is shown exactly as configured: empty means Coming Soon.
+  const anyText = (v) => (v == null ? "" : String(v).trim());
 
   /**
    * Normalise the raw config. Invalid addresses resolve to "" so the UI
@@ -46,7 +48,7 @@
       rpcUrl: clean(solana.rpcUrl) || CLUSTERS[cluster].rpcUrl,
       explorerUrl: clean(solana.explorerUrl).replace(/\/+$/, "") || "https://explorer.solana.com",
       programs,
-      token: { symbol: clean(token.symbol) || "RINDER", mint: address(token.mint) },
+      token: { symbol: clean(token.symbol) || "RINDER", mint: anyText(token.mint) },
       apiBaseUrl: clean((raw.api || {}).baseUrl).replace(/\/+$/, ""),
       stablecoins: (raw.stablecoins || []).map((s) => ({ ...s, mint: address(s.mint) })),
       links: Object.fromEntries(Object.entries(raw.links || {}).map(([k, v]) => [k, /^https:\/\//.test(clean(v)) ? clean(v) : ""])),

@@ -16,9 +16,16 @@ function load(file) {
 const { RINDER_CONFIG } = load("config.js");
 const { RINDER_DEMO } = load("data/demo.js");
 
-test("there is no Rinder token yet: the mint is empty and the CA reads Coming Soon", () => {
-  assert.equal(RINDER_CONFIG.token.mint, "");
-  assert.equal(R.resolveConfig(RINDER_CONFIG).token.mint, "");
+test("an empty token CA reads Coming Soon; any filled value is shown as is", () => {
+  const mint = (v) => R.resolveConfig({ ...RINDER_CONFIG, token: { symbol: "RINDER", mint: v } }).token.mint;
+  assert.equal(mint(""), "");
+  assert.equal(mint("   "), "");
+  assert.equal(mint(null), "");
+  assert.equal(mint(undefined), "");
+  assert.equal(mint(" EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v "), "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
+  assert.equal(mint("0xabc"), "0xabc");
+  assert.equal(mint("anything"), "anything");
+  assert.equal(typeof RINDER_CONFIG.token.mint, "string");
   const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
   assert.match(html, /data-ca-value[^>]*>Coming Soon</);
 });
@@ -28,7 +35,7 @@ test("no Rinder program is deployed yet: every program slot is empty", () => {
   assert.equal(RINDER_CONFIG.api.baseUrl, "");
 });
 
-test("a configured mint and program ID flow through; malformed ones are ignored", () => {
+test("a configured mint and program ID flow through; malformed program IDs are ignored", () => {
   const valid = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"; // any well formed key
   const cfg = R.resolveConfig({ ...RINDER_CONFIG, token: { symbol: "RINDER", mint: valid }, programs: { core: valid, registry: "not an address", verifier: "0xabc" } });
   assert.equal(cfg.token.mint, valid);

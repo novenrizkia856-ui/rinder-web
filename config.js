@@ -9,16 +9,20 @@
  *
  * Going live later:
  *   1. Deploy the Solana program(s) and copy each Program ID into `programs`.
- *   2. When a Rinder token exists, put its mint address in `token.mint`.
- *      The Token CA block on the landing page switches from "Coming Soon"
- *      to the mint and its copy button starts copying it. No HTML changes.
+ *   2. At token launch, paste the CA into TOKEN_CA just below. One line.
+ *      Empty shows "Coming Soon". Any non empty value is shown as is and
+ *      its copy button starts copying it. No HTML or JS changes.
  *   3. Point `api.baseUrl` at the Rinder API. Search and the transaction
  *      analyzer call it first and fall back to demo records when it is empty.
  *   4. Redeploy the static site.
  *
  * Empty strings are the "not configured" state and are always safe.
- * Values that are not valid base58 Solana addresses are ignored.
+ * Program IDs that are not valid base58 Solana addresses are ignored.
  */
+
+// TOKEN CA: paste the token address between the quotes. "" = Coming Soon.
+const TOKEN_CA = "";
+
 window.RINDER_CONFIG = {
   solana: {
     // "mainnet-beta", "devnet" or "testnet"
@@ -35,10 +39,10 @@ window.RINDER_CONFIG = {
     verifier: "",
   },
 
-  // There is no Rinder token yet. Keep `mint` empty until one exists.
+  // The mint comes from TOKEN_CA at the top of this file.
   token: {
     symbol: "RINDER",
-    mint: "",
+    mint: TOKEN_CA,
   },
 
   api: {
