@@ -17,7 +17,7 @@ window.RINDER_DEMO = {
   metrics: [
     { key: "merchants", label: "Tracked merchants", value: 1284 },
     { key: "endpoints", label: "Payment endpoints", value: 3912 },
-    { key: "stablecoins", label: "Stablecoins", value: 3 },
+    { key: "stablecoins", label: "Stablecoins", value: 4 },
     { key: "providers", label: "Payment providers", value: 27 },
     { key: "verified", label: "Verified records", value: 2406 },
     { key: "observed", label: "Observed transactions", value: 184220, suffix: "30d" },
@@ -151,6 +151,16 @@ window.RINDER_DEMO = {
 
   // Adoption view per stablecoin. Symbols match RINDER_CONFIG.stablecoins.
   stablecoinStats: {
+    USDG: {
+      merchants: 214,
+      endpoints: 388,
+      providers: 9,
+      observed: 19460,
+      change90d: 31,
+      categories: [["Software", 26], ["Retail", 25], ["Food and drink", 19], ["Other", 30]],
+      regions: [["Europe", 34], ["Asia Pacific", 28], ["North America", 22], ["Latin America", 16]],
+      verification: "PARTIALLY_VERIFIED",
+    },
     USDC: {
       merchants: 1106,
       endpoints: 3240,

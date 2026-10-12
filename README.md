@@ -63,9 +63,10 @@ The token CA is the exception: it is shown as typed. Everything in
 
 The Rinder contracts live in `rinder-contracts` (RinderCore, RinderRegistry,
 RinderVerifier). After `bash deploy-mainnet.sh` there, run `npm run contracts:sync`
-here, then commit and push. No Rinder token exists yet, and the stablecoin
-contracts on Robinhood Chain are not filled in yet. Check each issuer's
-contract on https://robinhoodchain.blockscout.com before pasting it.
+here, then commit and push. No Rinder token exists yet.
+
+Stablecoins: USDG (canonical, from docs.robinhood.com/chain/contracts) and
+the canonical bridge tokens for USDC, USDT and PYUSD, each checked on chain.
 
 ## Demo data
 
