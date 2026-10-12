@@ -8,6 +8,7 @@
     "dev": "node tools/serve.mjs 5280",
     "audit": "node tools/check-copy.mjs",
     "test": "node --test",
-    "check": "npm test && npm run audit"
+    "check": "npm test && npm run audit",
+    "contracts:sync": "node tools/sync-contracts.mjs"
   }
 }

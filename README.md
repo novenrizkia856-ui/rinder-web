@@ -10,6 +10,7 @@ Plain HTML, CSS and JavaScript. No framework, no build step, no backend.
 npm run dev      # http://127.0.0.1:5280, no caching
 npm test         # config, demo data and helper tests
 npm run audit    # copy rules, leftovers, stray addresses
+npm run contracts:sync   # copy addresses from ../rinder-contracts/deployments/mainnet.json
 ```
 
 Any static server works too, for example `python -m http.server 5280`.
@@ -23,6 +24,8 @@ Any static server works too, for example `python -m http.server 5280`.
 | `data/demo.js` | Demo merchants, providers, transactions, changes and metrics. Illustrative only |
 | `assets/css/rinder.css` | Styles and tokens |
 | `assets/js/core.js` | Config resolution, address checks, formatting, state glyphs, pixel icons, copy |
+| `assets/js/chain.js` | Onchain reads over JSON RPC: RinderCore classifications, registry names, record counts |
+| `tools/sync-contracts.mjs` | Writes the deployed contract addresses into `config.js` |
 | `assets/js/hero.js` | Hero pixel scene: transfers pass through the Rinder lens and leave sorted into the seven classifications |
 | `assets/js/pixel.js` | Dithered pixel scenes (analyzer sky, cards, footer) and the receipt art |
 | `assets/js/motion.js` | Word reveals, card reveals, counters, typewriter, clock, nav theme |
@@ -47,7 +50,7 @@ Edit `config.js` and push. No HTML changes are needed.
 | Key | When set | When empty |
 |---|---|---|
 | `TOKEN_CA` | Token CA shows the value, copy copies it | "Coming Soon", copy stays inert |
-| `contracts.core`, `registry`, `verifier` | Listed as deployed with Blockscout links | "Not deployed" |
+| `contracts.core`, `registry`, `verifier` | Listed with Blockscout links. The analyzer reads RinderCore first and the API section shows live record counts | "Not deployed", demo records only |
 | `stablecoins[].address` | Token contract shown with a Blockscout link | "Not configured" |
 | `api.baseUrl` | Analyzer calls `GET {baseUrl}/v1/transactions/{hash}` first | Demo records only |
 | `chain.rpcUrl`, `explorerUrl` | Custom RPC or explorer | Robinhood Chain public defaults |
@@ -58,7 +61,9 @@ Anything else is ignored, so a typo falls back to the unconfigured state.
 The token CA is the exception: it is shown as typed. Everything in
 `config.js` is public. Never put a key or secret there.
 
-No Rinder contract and no Rinder token exist yet, and the stablecoin
+The Rinder contracts live in `rinder-contracts` (RinderCore, RinderRegistry,
+RinderVerifier). After `bash deploy-mainnet.sh` there, run `npm run contracts:sync`
+here, then commit and push. No Rinder token exists yet, and the stablecoin
 contracts on Robinhood Chain are not filled in yet. Check each issuer's
 contract on https://robinhoodchain.blockscout.com before pasting it.
 

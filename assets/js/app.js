@@ -1,8 +1,9 @@
 /**
  * Rinder landing interactions.
  *
- * Data flows through `data` below: the Rinder API when api.baseUrl is
- * configured, local demo records otherwise. Nothing here hardcodes an
+ * Data flows through `data` below: the Rinder contracts on Robinhood Chain
+ * when config.contracts is filled (assets/js/chain.js), then the Rinder API
+ * when api.baseUrl is configured, local demo records otherwise. Nothing here hardcodes an
  * address. Stablecoin contracts come from config.stablecoins, Rinder
  * contracts and the token CA from config.contracts and config.token.
  */
@@ -37,6 +38,11 @@
       return res.json();
     },
     async transaction(hash) {
+      const C = window.RinderChain;
+      if (C && C.enabled && R.isTxHash(hash)) {
+        const record = await C.transaction(hash);
+        if (record) return { record, source: "chain" };
+      }
       if (this.live && R.isTxHash(hash)) {
         try { return { record: await this.get(`/v1/transactions/${encodeURIComponent(hash)}`), source: "api" }; } catch { /* fall back */ }
       }
@@ -378,7 +384,7 @@
       <div class="result__head">
         <span class="result__icon">${pixel(t.verdict === "LIKELY_PAYMENT" ? "coin" : t.verdict === "UNKNOWN" ? "scan" : "swap")}</span>
         <span class="result__title">Transaction intelligence</span>
-        <span class="result__time">${t.miss ? "No record" : source === "api" ? "Live" : "Demo record"}</span>
+        <span class="result__time">${t.miss ? "No record" : source === "chain" ? "Onchain" : source === "api" ? "Live" : "Demo record"}</span>
       </div>
       <p class="verdict verdict--${esc(t.verdict)}">${esc(R.VERDICTS[t.verdict] || "Unknown")}</p>
       <div class="result__badges">${R.clsBadge(t.classification)}${R.cBadge(t.confidence)}${R.vBadge(t.verification)}</div>
@@ -386,11 +392,11 @@
         ${t.miss ? "" : field("Stablecoin", coin ? `${esc(coin.symbol)} <span class="mini__muted">· ${esc(coin.standard)}</span>` : esc(t.stablecoin || "Unknown"))}
         ${coin && coin.address ? field("Token contract", addr(coin.address, `${coin.symbol} contract address`, R.explorerLink(cfg, "token", coin.address))) : ""}
         ${t.amount != null ? field("Observed amount", `<span class="mono">${esc(R.formatAmount(t.amount))} ${esc(t.stablecoin || "")}</span>`) : ""}
-        ${field("Merchant", m ? esc(m.name) : '<span class="mini__muted">None identified</span>')}
-        ${field("Provider", p ? esc(p.name) : '<span class="mini__muted">None identified</span>')}
+        ${field("Merchant", m ? esc(m.name) : t.merchantName ? esc(t.merchantName) : '<span class="mini__muted">None identified</span>')}
+        ${field("Provider", p ? esc(p.name) : t.providerName ? esc(t.providerName) : '<span class="mini__muted">None identified</span>')}
         ${t.wallet ? field("Wallet", addr(t.wallet, "wallet address")) : ""}
         ${t.contracts ? field("Contracts", `<span class="trunc">${esc(t.contracts.join(", "))}</span>`) : ""}
-        ${field("Tx hash", addr(t.hash, "transaction hash", source === "api" ? R.explorerLink(cfg, "tx", t.hash) : ""))}
+        ${field("Tx hash", addr(t.hash, "transaction hash", source === "api" || source === "chain" ? R.explorerLink(cfg, "tx", t.hash) : ""))}
         ${time ? field("Timestamp", `<span class="mono">${esc(time)}</span>`) : ""}
       </dl>
       ${t.evidence && t.evidence.length ? `<ul class="result__evidence" aria-label="Evidence">${t.evidence.map((e) => `<li>${esc(e)}</li>`).join("")}</ul>` : ""}`;
@@ -422,7 +428,7 @@
       const valid = R.isTxHash(hash);
       t = {
         hash, verdict: "UNKNOWN", classification: "UNKNOWN", confidence: "LOW", verification: null, miss: true,
-        evidence: valid ? ["Not in the demo dataset", data.live ? "The Rinder API returned no record" : "Live analysis arrives with the Rinder API"] : [`This is not a ${cfg.chainName} transaction hash`, "A hash is 0x followed by 64 hex characters"],
+        evidence: valid ? [window.RinderChain?.enabled ? "Not classified on Rinder Core yet" : "Not in the demo dataset", data.live ? "The Rinder API returned no record" : "Live analysis arrives with the Rinder API"] : [`This is not a ${cfg.chainName} transaction hash`, "A hash is 0x followed by 64 hex characters"],
       };
     }
     box.innerHTML = renderResult(t, source);
@@ -700,6 +706,17 @@
         ...Object.entries(cfg.contracts).map(([k, v]) => contract(`${k.charAt(0).toUpperCase()}${k.slice(1)} contract`, v)),
         row("Token contract", cfg.token.address ? addr(cfg.token.address, "token contract", R.isAddress(cfg.token.address) ? R.explorerLink(cfg, "token", cfg.token.address) : "") : '<span class="mini__muted">Coming soon</span>', Boolean(cfg.token.address)),
       ].join("");
+      const C = window.RinderChain;
+      if (C && C.enabled) {
+        dl.insertAdjacentHTML("beforeend", row("Onchain records", '<span class="mini__muted" data-chain-records>Reading Robinhood Chain</span>', true));
+        C.stats().then((s) => {
+          const el = $("[data-chain-records]");
+          if (!el) return;
+          if (!s) { el.textContent = "RPC unavailable"; return; }
+          el.className = "mono";
+          el.textContent = `${R.formatNumber(s.entities)} entities · ${R.formatNumber(s.endpoints)} endpoints · ${R.formatNumber(s.txs)} classified · ${R.formatNumber(s.checks ?? 0)} checks`;
+        });
+      }
     }
     const pre = $("[data-code]");
     if (pre) {
