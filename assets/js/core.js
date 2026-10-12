@@ -9,25 +9,25 @@
 (function (root) {
   "use strict";
 
-  const BASE58 = /^[1-9A-HJ-NP-Za-km-z]+$/;
-  const CLUSTERS = {
-    "mainnet-beta": { label: "Mainnet Beta", rpcUrl: "https://api.mainnet-beta.solana.com" },
-    devnet: { label: "Devnet", rpcUrl: "https://api.devnet.solana.com" },
-    testnet: { label: "Testnet", rpcUrl: "https://api.testnet.solana.com" },
+  const DEFAULT_CHAIN = {
+    name: "Robinhood Chain",
+    chainId: 4663,
+    rpcUrl: "https://rpc.mainnet.chain.robinhood.com",
+    explorerUrl: "https://robinhoodchain.blockscout.com",
   };
 
-  /** A Solana public key is 32 bytes: 32 to 44 base58 characters. */
-  function isSolanaAddress(value) {
-    return typeof value === "string" && value.length >= 32 && value.length <= 44 && BASE58.test(value);
+  /** An EVM address is 20 bytes: 0x and 40 hex characters. */
+  function isAddress(value) {
+    return typeof value === "string" && /^0x[0-9a-fA-F]{40}$/.test(value);
   }
 
-  /** A transaction signature is 64 bytes: 86 to 88 base58 characters. */
-  function isSignature(value) {
-    return typeof value === "string" && value.length >= 86 && value.length <= 88 && BASE58.test(value);
+  /** A transaction hash is 32 bytes: 0x and 64 hex characters. */
+  function isTxHash(value) {
+    return typeof value === "string" && /^0x[0-9a-fA-F]{64}$/.test(value);
   }
 
   const clean = (v) => (typeof v === "string" ? v.trim() : "");
-  const address = (v) => (isSolanaAddress(clean(v)) ? clean(v) : "");
+  const address = (v) => (isAddress(clean(v)) ? clean(v) : "");
   // The token CA is shown exactly as configured: empty means Coming Soon.
   const anyText = (v) => (v == null ? "" : String(v).trim());
 
@@ -37,30 +37,30 @@
    */
   function resolveConfig(raw) {
     raw = raw || {};
-    const solana = raw.solana || {};
-    const cluster = CLUSTERS[clean(solana.cluster)] ? clean(solana.cluster) : "mainnet-beta";
-    const programs = {};
-    for (const [key, value] of Object.entries(raw.programs || {})) programs[key] = address(value);
+    const chain = raw.chain || {};
+    const chainId = Number.isInteger(Number(chain.chainId)) && Number(chain.chainId) > 0 ? Number(chain.chainId) : DEFAULT_CHAIN.chainId;
+    const contracts = {};
+    for (const [key, value] of Object.entries(raw.contracts || {})) contracts[key] = address(value);
     const token = raw.token || {};
     return {
-      cluster,
-      clusterLabel: CLUSTERS[cluster].label,
-      rpcUrl: clean(solana.rpcUrl) || CLUSTERS[cluster].rpcUrl,
-      explorerUrl: clean(solana.explorerUrl).replace(/\/+$/, "") || "https://explorer.solana.com",
-      programs,
-      token: { symbol: clean(token.symbol) || "RINDER", mint: anyText(token.mint) },
+      chainName: clean(chain.name) || DEFAULT_CHAIN.name,
+      chainId,
+      rpcUrl: clean(chain.rpcUrl) || DEFAULT_CHAIN.rpcUrl,
+      explorerUrl: clean(chain.explorerUrl).replace(/\/+$/, "") || DEFAULT_CHAIN.explorerUrl,
+      contracts,
+      token: { symbol: clean(token.symbol) || "RINDER", address: anyText(token.address) },
       apiBaseUrl: clean((raw.api || {}).baseUrl).replace(/\/+$/, ""),
-      stablecoins: (raw.stablecoins || []).map((s) => ({ ...s, mint: address(s.mint) })),
+      stablecoins: (raw.stablecoins || []).map((s) => ({ ...s, address: address(s.address) })),
       links: Object.fromEntries(Object.entries(raw.links || {}).map(([k, v]) => [k, /^https:\/\//.test(clean(v)) ? clean(v) : ""])),
     };
   }
 
+  /** Blockscout paths: /tx/{hash}, /address/{address}, /token/{address}. */
   function explorerLink(config, kind, value) {
     if (!value) return "";
-    const path = { tx: "tx", address: "address" }[kind];
+    const path = { tx: "tx", address: "address", token: "token" }[kind];
     if (!path) return "";
-    const cluster = config.cluster === "mainnet-beta" ? "" : `?cluster=${config.cluster}`;
-    return `${config.explorerUrl}/${path}/${encodeURIComponent(value)}${cluster}`;
+    return `${config.explorerUrl}/${path}/${encodeURIComponent(value)}`;
   }
 
   /** Keep both ends of a long address or signature. */
@@ -88,7 +88,7 @@
     PAYMENT_GATEWAY: { label: "Payment gateway", family: "pay", glyph: "111101111", desc: "Routed through a known provider." },
     TREASURY: { label: "Treasury", family: "other", glyph: "111000111", desc: "Settlement or operational movement." },
     EXCHANGE: { label: "Exchange", family: "other", glyph: "010111010", desc: "Exchange controlled infrastructure." },
-    DEFI: { label: "DeFi", family: "other", glyph: "100010001", desc: "Swaps, lending or routing programs." },
+    DEFI: { label: "DeFi", family: "other", glyph: "100010001", desc: "Swaps, lending or routing contracts." },
     INTERNAL_TRANSFER: { label: "Internal transfer", family: "other", glyph: "110110000", desc: "Between wallets of one owner." },
     UNKNOWN: { label: "Unknown", family: "unknown", glyph: "000010000", desc: "Not enough evidence. Said plainly." },
   };
@@ -207,8 +207,8 @@
   const reducedMotion = () => typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   const api = {
-    CLUSTERS, CLASSIFICATIONS, VERIFICATION, CONFIDENCE, VERDICTS,
-    isSolanaAddress, isSignature, resolveConfig, explorerLink,
+    DEFAULT_CHAIN, CLASSIFICATIONS, VERIFICATION, CONFIDENCE, VERDICTS,
+    isAddress, isTxHash, resolveConfig, explorerLink,
     truncate, formatNumber, formatAmount, formatDate, formatTime, esc,
     clsBadge, vBadge, cBadge, ringSvg, pixel, copyText, copyButton, toast, reducedMotion,
   };

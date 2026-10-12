@@ -4,9 +4,9 @@
  *   1. No hyphen, en dash or em dash in the landing page's visible copy.
  *   2. No visible sentence over 15 words.
  *   3. No sentence dash in strings the scripts render.
- *   4. Nothing left over from the reference site, no EVM or multichain terms,
- *      no hype words.
- *   5. No Solana address outside config.js.
+ *   4. Nothing left over from the reference site or the old Solana build,
+ *      no other chains or multichain terms, no hype words.
+ *   5. No 0x contract address outside config.js.
  */
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
@@ -54,11 +54,12 @@ walk(root);
 
 const LEFTOVERS = [
   /general intelligence/i, /cofounder/i, /new york/i, /\bnyc\b/i, /knicks/i, /altalogy/i, /pignanelli/i, /intelligenceco/i,
-  /ethereum/i, /\bevm\b/i, /solidity/i, /arbitrum/i, /polygon/i, /\bbnb\b/i, /\bbase chain\b/i, /robinhood/i, /multichain/i, /metamask/i,
-  /\b0x[0-9a-f]{40}\b/i, /lorem ipsum/i, /\bTODO\b/, /tokenomics/i, /presale/i, /airdrop/i,
+  /solana/i, /base58/i, /lamport/i, /\bspl token\b/i, /token 2022/i, /devnet/i, /mainnet.beta/i, /associated token account/i,
+  /arbitrum/i, /polygon/i, /\bbnb\b/i, /\bbase chain\b/i, /multichain/i, /metamask/i,
+  /lorem ipsum/i, /\bTODO\b/, /tokenomics/i, /presale/i, /airdrop/i,
   /revolutionary/i, /game changing/i, /\bmoon\b/i, /\b100x\b/i, /\bweb3\b/i, /financial freedom/i, /next big thing/i,
 ];
-const ADDRESS = /["'`]([1-9A-HJ-NP-Za-km-z]{32,44})["'`]/;
+const ADDRESS = /\b(0x[0-9a-fA-F]{40})\b/;
 // En and em dashes anywhere, or " - " between words inside a string literal
 const SENTENCE_DASH = /[–—]|(["'])[^"'\n]*[A-Za-z] - [A-Za-z][^"'\n]*\1/;
 
@@ -69,7 +70,7 @@ for (const file of files) {
   for (const pattern of LEFTOVERS) if (pattern.test(source)) fail(`${rel}: matches ${pattern}`);
   if (/\.(js|mjs|html)$/.test(file) && rel !== "config.js" && !rel.startsWith("test/")) {
     const m = source.match(ADDRESS);
-    if (m) fail(`${rel}: hardcoded Solana address ${m[1]}. Addresses belong in config.js.`);
+    if (m) fail(`${rel}: hardcoded contract address ${m[1]}. Addresses belong in config.js.`);
   }
   if (/^(assets\/js|data)\//.test(rel)) {
     for (const line of source.split("\n")) {

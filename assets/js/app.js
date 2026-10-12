@@ -3,8 +3,8 @@
  *
  * Data flows through `data` below: the Rinder API when api.baseUrl is
  * configured, local demo records otherwise. Nothing here hardcodes an
- * address. Mints come from config.stablecoins, Rinder program IDs and the
- * token mint from config.programs and config.token.
+ * address. Stablecoin contracts come from config.stablecoins, Rinder
+ * contracts and the token CA from config.contracts and config.token.
  */
 (function () {
   "use strict";
@@ -36,11 +36,12 @@
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       return res.json();
     },
-    async transaction(signature) {
-      if (this.live && R.isSignature(signature)) {
-        try { return { record: await this.get(`/v1/transactions/${encodeURIComponent(signature)}`), source: "api" }; } catch { /* fall back */ }
+    async transaction(hash) {
+      if (this.live && R.isTxHash(hash)) {
+        try { return { record: await this.get(`/v1/transactions/${encodeURIComponent(hash)}`), source: "api" }; } catch { /* fall back */ }
       }
-      const record = transactions.find((t) => t.signature === signature) || (signature.length >= 8 && transactions.find((t) => t.signature.startsWith(signature)));
+      const h = hash.toLowerCase();
+      const record = transactions.find((t) => t.hash.toLowerCase() === h) || (h.length >= 8 && transactions.find((t) => t.hash.toLowerCase().startsWith(h)));
       return { record: record || null, source: "demo" };
     },
   };
@@ -74,13 +75,13 @@
     const btn = $("[data-ca-copy]");
     const text = $("[data-ca-copy-text]");
     if (!value || !btn) return;
-    const mint = cfg.token.mint;
-    if (mint) {
-      value.textContent = R.truncate(mint, 8, 8);
-      value.title = mint;
+    const ca = cfg.token.address;
+    if (ca) {
+      value.textContent = R.truncate(ca, 8, 8);
+      value.title = ca;
       value.classList.remove("is-soon");
       btn.removeAttribute("aria-disabled");
-      btn.setAttribute("aria-label", `Copy ${cfg.token.symbol} mint address`);
+      btn.setAttribute("aria-label", `Copy ${cfg.token.symbol} contract address`);
     } else {
       value.textContent = "Coming Soon";
       value.title = "";
@@ -89,13 +90,13 @@
       btn.setAttribute("aria-label", "Copy token CA. Not available yet");
     }
     btn.addEventListener("click", async () => {
-      if (!cfg.token.mint) {
+      if (!cfg.token.address) {
         text.textContent = "Soon";
         R.toast("The token CA is not live yet");
         setTimeout(() => (text.textContent = "Copy"), 1600);
         return;
       }
-      const ok = await R.copyText(cfg.token.mint);
+      const ok = await R.copyText(cfg.token.address);
       btn.classList.toggle("is-copied", ok);
       text.textContent = ok ? "Copied" : "Failed";
       setTimeout(() => { text.textContent = "Copy"; btn.classList.remove("is-copied"); }, 1600);
@@ -111,23 +112,23 @@
       idx.push({ kind: "Merchant", icon: "store", title: m.name, sub: `${m.stablecoins.join(", ")} · ${p ? p.name : "Direct"} · ${m.region}`, keys: [m.name, m.category, m.region, m.endpoint], go: () => openProfile("merchant", m.id) });
     }
     for (const c of coins) {
-      idx.push({ kind: "Stablecoin", icon: "coin", title: `${c.symbol} · ${c.name}`, sub: `Mint ${R.truncate(c.mint, 4, 4)} · ${c.tokenProgram}`, keys: [c.symbol, c.name, c.issuer, c.mint], go: () => openProfile("stablecoin", c.symbol) });
+      idx.push({ kind: "Stablecoin", icon: "coin", title: `${c.symbol} · ${c.name}`, sub: `${c.address ? `Contract ${R.truncate(c.address, 6, 4)}` : "Contract not configured"} · ${c.standard}`, keys: [c.symbol, c.name, c.issuer, c.address], go: () => openProfile("stablecoin", c.symbol) });
     }
     for (const p of providers) {
       idx.push({ kind: "Provider", icon: "route", title: p.name, sub: `${R.formatNumber(p.merchants)} merchants · ${p.stablecoins.join(", ")}`, keys: [p.name, p.address, ...p.regions], go: () => openProfile("provider", p.id) });
     }
     for (const t of transactions) {
-      idx.push({ kind: "Transaction", icon: "scan", title: t.label, sub: R.truncate(t.signature, 10, 6), keys: [t.signature, t.label, t.wallet, t.stablecoin], go: () => analyze(t.signature, true) });
+      idx.push({ kind: "Transaction", icon: "scan", title: t.label, sub: R.truncate(t.hash, 10, 6), keys: [t.hash, t.label, t.wallet, t.stablecoin], go: () => analyze(t.hash, true) });
     }
-    const programs = new Set(transactions.flatMap((t) => t.programs).concat((demo.solana?.programs || []).map((p) => p.name)));
-    for (const name of programs) {
-      idx.push({ kind: "Program", icon: "endpoint", title: name, sub: "Program interactions on Solana", keys: [name], go: () => focusProgram(name) });
+    const contracts = new Set(transactions.flatMap((t) => t.contracts).concat((demo.chain?.contracts || []).map((c) => c.name)));
+    for (const name of contracts) {
+      idx.push({ kind: "Contract", icon: "endpoint", title: name, sub: `Contract interactions on ${cfg.chainName}`, keys: [name], go: () => focusContract(name) });
     }
     return idx;
   }
 
-  const KIND_ORDER = ["Merchant", "Stablecoin", "Provider", "Transaction", "Program"];
-  const KIND_BOOST = { Merchant: 12, Stablecoin: 12, Provider: 10, Transaction: 0, Program: 2 };
+  const KIND_ORDER = ["Merchant", "Stablecoin", "Provider", "Transaction", "Contract"];
+  const KIND_BOOST = { Merchant: 12, Stablecoin: 12, Provider: 10, Transaction: 0, Contract: 2 };
 
   function searchIndex(index, q) {
     const query = q.trim().toLowerCase();
@@ -157,7 +158,7 @@
     const list = $("#search-results");
     const index = buildIndex();
     let items = [], active = -1;
-    const placeholder = () => (input.placeholder = innerWidth < 440 ? "Merchant, stablecoin or signature" : "Search merchant, stablecoin or transaction");
+    const placeholder = () => (input.placeholder = innerWidth < 440 ? "Merchant, stablecoin or tx hash" : "Search merchant, stablecoin or transaction");
     placeholder();
     addEventListener("resize", placeholder);
 
@@ -177,8 +178,8 @@
       const q = input.value;
       items = searchIndex(index, q);
       const trimmed = q.trim();
-      if (!items.length && R.isSignature(trimmed)) items = [{ kind: "Signature", icon: "scan", title: "Analyze this signature", sub: R.truncate(trimmed, 10, 6), go: () => analyze(trimmed, true) }];
-      else if (!items.length && R.isSolanaAddress(trimmed)) items = [{ kind: "Address", icon: "endpoint", title: "Address not in demo data", sub: data.live ? "Lookups use the Rinder API" : "Live address lookups arrive with the API", go: () => R.toast("Not in demo data") }];
+      if (!items.length && R.isTxHash(trimmed)) items = [{ kind: "Transaction", icon: "scan", title: "Analyze this transaction", sub: R.truncate(trimmed, 10, 6), go: () => analyze(trimmed, true) }];
+      else if (!items.length && R.isAddress(trimmed)) items = [{ kind: "Address", icon: "endpoint", title: "Address not in demo data", sub: data.live ? "Lookups use the Rinder API" : "Live address lookups arrive with the API", go: () => R.toast("Not in demo data") }];
       if (!trimmed) return close();
       let html = "", group = "";
       items.forEach((it, i) => {
@@ -221,8 +222,8 @@
   /* ---------------- Classification stepper ---------------- */
 
   const STEPS = [
-    { title: "Observe", body: "A USDC transfer lands on Solana." },
-    { title: "Resolve", body: "Token accounts map to owners and programs." },
+    { title: "Observe", body: "A USDC transfer lands on Robinhood Chain." },
+    { title: "Resolve", body: "Transfer logs map to wallets and contracts." },
     { title: "Match", body: "Known merchants and providers are checked." },
     { title: "Weigh", body: "DeFi, exchange and treasury signals are compared." },
     { title: "Classify", body: "A category, a confidence level and the evidence." },
@@ -237,12 +238,12 @@
       ? [[14, 20], [168, 20], [14, 108], [168, 108], [14, 196], [168, 196], [60, 290]]
       : [[16, 36], [16, 148], [176, 36], [176, 148], [336, 36], [336, 148], [490, 86]];
     const nodes = [
-      { k: "SIGNATURE", v: R.truncate(t.signature, 7, 4), step: 0 },
+      { k: "TX HASH", v: R.truncate(t.hash, 7, 4), step: 0 },
       { k: "TRANSFER", v: `${R.formatAmount(t.amount)} ${t.stablecoin}`, step: 0 },
-      { k: "SOURCE OWNER", v: "Customer wallet", step: 1 },
-      { k: "DEST OWNER", v: p.name, step: 1 },
+      { k: "FROM", v: "Customer wallet", step: 1 },
+      { k: "TO", v: p.name, step: 1 },
       { k: "MERCHANT", v: m.name, step: 2 },
-      { k: "SIGNALS", v: "Memo match", step: 3 },
+      { k: "SIGNALS", v: "Reference match", step: 3 },
       { k: "HIGH CONFIDENCE", v: "Payment gateway", step: 4, out: true },
     ];
     const edges = [[0, 1, 0], [1, 2, 1], [1, 3, 1], [3, 4, 2], [2, 5, 3], [4, 6, 4], [5, 6, 4]];
@@ -361,7 +362,7 @@
 
   /* ---------------- Transaction analyzer ---------------- */
 
-  const SCAN_STEPS = ["Reading transaction", "Resolving token accounts", "Matching entities", "Weighing evidence"];
+  const SCAN_STEPS = ["Reading transaction", "Decoding transfer logs", "Matching entities", "Weighing evidence"];
 
   function field(label, value) {
     return `<div class="kv"><dt>${esc(label)}</dt><dd>${value}</dd></div>`;
@@ -382,46 +383,46 @@
       <p class="verdict verdict--${esc(t.verdict)}">${esc(R.VERDICTS[t.verdict] || "Unknown")}</p>
       <div class="result__badges">${R.clsBadge(t.classification)}${R.cBadge(t.confidence)}${R.vBadge(t.verification)}</div>
       <dl>
-        ${t.miss ? "" : field("Stablecoin", coin ? `${esc(coin.symbol)} <span class="mini__muted">· ${esc(coin.tokenProgram)}</span>` : esc(t.stablecoin || "Unknown"))}
-        ${coin && coin.mint ? field("Mint", addr(coin.mint, `${coin.symbol} mint address`, R.explorerLink(cfg, "address", coin.mint))) : ""}
+        ${t.miss ? "" : field("Stablecoin", coin ? `${esc(coin.symbol)} <span class="mini__muted">· ${esc(coin.standard)}</span>` : esc(t.stablecoin || "Unknown"))}
+        ${coin && coin.address ? field("Token contract", addr(coin.address, `${coin.symbol} contract address`, R.explorerLink(cfg, "token", coin.address))) : ""}
         ${t.amount != null ? field("Observed amount", `<span class="mono">${esc(R.formatAmount(t.amount))} ${esc(t.stablecoin || "")}</span>`) : ""}
         ${field("Merchant", m ? esc(m.name) : '<span class="mini__muted">None identified</span>')}
         ${field("Provider", p ? esc(p.name) : '<span class="mini__muted">None identified</span>')}
         ${t.wallet ? field("Wallet", addr(t.wallet, "wallet address")) : ""}
-        ${t.programs ? field("Programs", `<span class="trunc">${esc(t.programs.join(", "))}</span>`) : ""}
-        ${field("Signature", addr(t.signature, "transaction signature", source === "api" ? R.explorerLink(cfg, "tx", t.signature) : ""))}
+        ${t.contracts ? field("Contracts", `<span class="trunc">${esc(t.contracts.join(", "))}</span>`) : ""}
+        ${field("Tx hash", addr(t.hash, "transaction hash", source === "api" ? R.explorerLink(cfg, "tx", t.hash) : ""))}
         ${time ? field("Timestamp", `<span class="mono">${esc(time)}</span>`) : ""}
       </dl>
       ${t.evidence && t.evidence.length ? `<ul class="result__evidence" aria-label="Evidence">${t.evidence.map((e) => `<li>${esc(e)}</li>`).join("")}</ul>` : ""}`;
   }
 
   let analyzeRun = 0;
-  async function analyze(signature, scroll) {
+  async function analyze(hash, scroll) {
     const box = $("[data-result]");
-    const input = $("#signature-input");
+    const input = $("#hash-input");
     if (!box) return;
-    signature = String(signature || "").trim();
-    input.value = signature;
-    $$("[data-samples] .hint").forEach((b) => b.setAttribute("aria-pressed", b.dataset.sig === signature ? "true" : "false"));
+    hash = String(hash || "").trim();
+    input.value = hash;
+    $$("[data-samples] .hint").forEach((b) => b.setAttribute("aria-pressed", b.dataset.hash === hash ? "true" : "false"));
     if (scroll) $("#analyzer").scrollIntoView({ behavior: still ? "auto" : "smooth", block: "start" });
-    if (!signature) { R.toast("Enter a transaction signature"); input.focus(); return; }
+    if (!hash) { R.toast("Enter a transaction hash"); input.focus(); return; }
 
     const run = ++analyzeRun;
     box.classList.remove("is-new");
-    box.innerHTML = `<div class="scanline" aria-hidden="true"></div><div class="scanning"><p class="result__kicker">Analyzing</p><p class="scanning__sig">${esc(R.truncate(signature, 12, 8))}</p><ol>${SCAN_STEPS.map((s) => `<li>${esc(s)}</li>`).join("")}</ol></div>`;
+    box.innerHTML = `<div class="scanline" aria-hidden="true"></div><div class="scanning"><p class="result__kicker">Analyzing</p><p class="scanning__sig">${esc(R.truncate(hash, 12, 8))}</p><ol>${SCAN_STEPS.map((s) => `<li>${esc(s)}</li>`).join("")}</ol></div>`;
     const lis = $$(".scanning li", box);
     const wait = (ms) => new Promise((r) => setTimeout(r, still ? 0 : ms));
-    const lookup = data.transaction(signature);
+    const lookup = data.transaction(hash);
     for (let i = 0; i < lis.length; i++) { lis[i].classList.add("on"); await wait(260); if (run !== analyzeRun) return; }
     const { record, source } = await lookup;
     if (run !== analyzeRun) return;
 
     let t = record;
     if (!t) {
-      const valid = R.isSignature(signature);
+      const valid = R.isTxHash(hash);
       t = {
-        signature, verdict: "UNKNOWN", classification: "UNKNOWN", confidence: "LOW", verification: null, miss: true,
-        evidence: valid ? ["Not in the demo dataset", data.live ? "The Rinder API returned no record" : "Live analysis arrives with the Rinder API"] : ["This is not a Solana transaction signature", "Signatures are 86 to 88 base58 characters"],
+        hash, verdict: "UNKNOWN", classification: "UNKNOWN", confidence: "LOW", verification: null, miss: true,
+        evidence: valid ? ["Not in the demo dataset", data.live ? "The Rinder API returned no record" : "Live analysis arrives with the Rinder API"] : [`This is not a ${cfg.chainName} transaction hash`, "A hash is 0x followed by 64 hex characters"],
       };
     }
     box.innerHTML = renderResult(t, source);
@@ -433,11 +434,11 @@
     const form = $("[data-analyze]");
     if (!form) return;
     const samples = $("[data-samples]");
-    samples.innerHTML = transactions.map((t) => `<button type="button" class="hint" aria-pressed="false" data-sig="${esc(t.signature)}">${esc(t.label)}</button>`).join("");
-    samples.addEventListener("click", (e) => { const b = e.target.closest("[data-sig]"); if (b) analyze(b.dataset.sig); });
-    form.addEventListener("submit", (e) => { e.preventDefault(); analyze($("#signature-input").value); });
+    samples.innerHTML = transactions.map((t) => `<button type="button" class="hint" aria-pressed="false" data-hash="${esc(t.hash)}">${esc(t.label)}</button>`).join("");
+    samples.addEventListener("click", (e) => { const b = e.target.closest("[data-hash]"); if (b) analyze(b.dataset.hash); });
+    form.addEventListener("submit", (e) => { e.preventDefault(); analyze($("#hash-input").value); });
     // Show a real result on first view instead of an empty card
-    new IntersectionObserver(([e], io) => { if (!e.isIntersecting) return; io.disconnect(); if (!$("#signature-input").value && transactions[0]) analyze(transactions[0].signature); }, { threshold: 0.35 }).observe($("[data-result]"));
+    new IntersectionObserver(([e], io) => { if (!e.isIntersecting) return; io.disconnect(); if (!$("#hash-input").value && transactions[0]) analyze(transactions[0].hash); }, { threshold: 0.35 }).observe($("[data-result]"));
     const tw = $("[data-typewriter]");
     if (tw) M.typewriter(tw, ["exchange deposits from checkout", "treasury moves from purchases", "a real payment from a transfer"]);
   }
@@ -482,8 +483,8 @@
     return `
       <div class="profile__top"><div><p class="profile__kind">Stablecoin · ${esc(c.issuer)}</p><h3 class="profile__name">${esc(c.symbol)} <span class="mini__muted" style="font-size:.55em">${esc(c.name)}</span></h3></div>${R.vBadge(s.verification)}</div>
       <dl class="profile__grid">
-        ${field("Mint address", c.mint ? addr(c.mint, `${c.symbol} mint address`, R.explorerLink(cfg, "address", c.mint)) : '<span class="mini__muted">Not configured</span>')}
-        ${field("Token program", esc(c.tokenProgram))}
+        ${field("Token contract", c.address ? addr(c.address, `${c.symbol} contract address`, R.explorerLink(cfg, "token", c.address)) : '<span class="mini__muted">Not configured</span>')}
+        ${field("Standard", esc(c.standard))}
         ${field("Known merchants", `<span class="mono">${R.formatNumber(s.merchants || 0)}</span>`)}
         ${field("Payment endpoints", `<span class="mono">${R.formatNumber(s.endpoints || 0)}</span>`)}
         ${field("Providers", `<span class="mono">${R.formatNumber(s.providers || 0)}</span> <span class="mini__muted trunc">${esc(ps.join(", "))}</span>`)}
@@ -511,7 +512,7 @@
         ${field("First observed", `<span class="mono">${esc(R.formatDate(p.firstObserved))}</span>`)}
         ${field("Last observed", `<span class="mono">${esc(R.formatDate(p.lastObserved))}</span>`)}
       </dl>
-      <div class="profile__sub"><span class="label">Program integrations</span><span class="chips">${p.programs.map((s) => `<span class="chip">${esc(s)}</span>`).join("")}</span></div>`;
+      <div class="profile__sub"><span class="label">Contract integrations</span><span class="chips">${p.contracts.map((s) => `<span class="chip">${esc(s)}</span>`).join("")}</span></div>`;
   }
 
   function renderExplorer(animate) {
@@ -543,7 +544,7 @@
     renderExplorer(false);
   }
 
-  /* ---------------- Solana intelligence ---------------- */
+  /* ---------------- Robinhood Chain intelligence ---------------- */
 
   function mapSvg() {
     const t = transactions[0];
@@ -551,11 +552,11 @@
     const p = providerById(t.provider), m = merchantById(t.merchant);
     const N = [
       { x: 20, y: 36, k: "WALLET", v: "Customer" },
-      { x: 20, y: 170, k: "TOKEN ACCOUNT", v: `Source ${t.stablecoin}` },
-      { x: 210, y: 100, k: "PROGRAM", v: "SPL Token", hl: true },
-      { x: 400, y: 170, k: "TOKEN ACCOUNT", v: `Dest ${t.stablecoin}` },
-      { x: 400, y: 36, k: "OWNER", v: `${p.name}` },
-      { x: 210, y: 16, k: "MINT", v: coin ? R.truncate(coin.mint, 5, 4) : t.stablecoin },
+      { x: 20, y: 170, k: "FROM", v: `Sends ${t.stablecoin}` },
+      { x: 210, y: 100, k: "TRANSFER LOG", v: "ERC20 Transfer", hl: true },
+      { x: 400, y: 170, k: "TO", v: `Receives ${t.stablecoin}` },
+      { x: 400, y: 36, k: "RECIPIENT", v: `${p.name}` },
+      { x: 210, y: 16, k: "TOKEN", v: coin && coin.address ? R.truncate(coin.address, 6, 4) : `${t.stablecoin} ERC20` },
       { x: 400, y: 290, k: "MERCHANT", v: m.name, hl: true },
       { x: 110, y: 290, k: "CLASSIFIED", v: "Payment gateway", out: true },
     ];
@@ -576,21 +577,21 @@
     return svg;
   }
 
-  function solana() {
-    const stats = $("[data-solana-stats]");
+  function chain() {
+    const stats = $("[data-chain-stats]");
     if (!stats) return;
-    stats.innerHTML = (demo.solana?.stats || []).map((s) => `<div><dt>${esc(s.label)}</dt><dd data-count="${s.value}">${s.suffix ? `<small>${esc(s.suffix)}</small>` : ""}</dd></div>`).join("");
+    stats.innerHTML = (demo.chain?.stats || []).map((s) => `<div><dt>${esc(s.label)}</dt><dd data-count="${s.value}">${s.suffix ? `<small>${esc(s.suffix)}</small>` : ""}</dd></div>`).join("");
     $$("[data-count]", stats).forEach((el) => M.countUp(el, Number(el.dataset.count)));
     $("[data-map]").innerHTML = mapSvg();
 
-    const programs = $("[data-programs]");
-    programs.innerHTML = (demo.solana?.programs || []).map((p) => `<li data-program="${esc(p.name)}"><span>${esc(p.name)}</span><span class="mini__bar"><i style="--v:0"></i></span><span>${p.share}%</span></li>`).join("");
-    const bars = $$(".mini__bar i", programs);
-    new IntersectionObserver(([e], io) => { if (!e.isIntersecting) return; io.disconnect(); bars.forEach((b, i) => (b.style.setProperty("--v", (demo.solana.programs[i].share / 100).toFixed(2)))); }, { threshold: 0.3 }).observe(programs);
+    const list = $("[data-contracts]");
+    list.innerHTML = (demo.chain?.contracts || []).map((p) => `<li data-contract="${esc(p.name)}"><span>${esc(p.name)}</span><span class="mini__bar"><i style="--v:0"></i></span><span>${p.share}%</span></li>`).join("");
+    const bars = $$(".mini__bar i", list);
+    new IntersectionObserver(([e], io) => { if (!e.isIntersecting) return; io.disconnect(); bars.forEach((b, i) => (b.style.setProperty("--v", (demo.chain.contracts[i].share / 100).toFixed(2)))); }, { threshold: 0.3 }).observe(list);
 
     // Observed activity: demo transfers cycling in, newest on top
     const feed = $("[data-feed]");
-    const row = (t) => `<li class="feed__row on-dark"><span class="mono trunc" title="${esc(t.signature)}">${esc(R.truncate(t.signature, 10, 4))}</span><span class="col-coin">${esc(t.stablecoin)}</span><span class="amt mono">${esc(R.formatAmount(t.amount))}</span><span>${R.clsBadge(t.classification)}</span><span class="col-conf">${R.cBadge(t.confidence)}</span></li>`;
+    const row = (t) => `<li class="feed__row on-dark"><span class="mono trunc" title="${esc(t.hash)}">${esc(R.truncate(t.hash, 10, 4))}</span><span class="col-coin">${esc(t.stablecoin)}</span><span class="amt mono">${esc(R.formatAmount(t.amount))}</span><span>${R.clsBadge(t.classification)}</span><span class="col-conf">${R.cBadge(t.confidence)}</span></li>`;
     let n = 0;
     feed.innerHTML = transactions.slice(0, 5).map(row).join("");
     if (still) return;
@@ -604,11 +605,11 @@
     }, 2600);
   }
 
-  function focusProgram(name) {
-    $("#solana").scrollIntoView({ behavior: still ? "auto" : "smooth" });
-    const li = $$("[data-program]").find((l) => l.dataset.program === name);
+  function focusContract(name) {
+    $("#chain").scrollIntoView({ behavior: still ? "auto" : "smooth" });
+    const li = $$("[data-contract]").find((l) => l.dataset.contract === name);
     if (li) { li.style.transition = "background-color .6s"; li.style.backgroundColor = "rgba(160,215,209,.12)"; setTimeout(() => (li.style.backgroundColor = ""), 1800); }
-    else R.toast(`${name}: see program interactions`);
+    else R.toast(`${name}: see contract interactions`);
   }
 
   /* ---------------- Verification ---------------- */
@@ -661,7 +662,7 @@
 
   /* ---------------- Change intelligence ---------------- */
 
-  const CHANGE_ICON = { STABLECOIN_ADDED: "plus", STABLECOIN_REMOVED: "minus", PROVIDER_CHANGED: "route", ENDPOINT_CHANGED: "endpoint", VERIFICATION_STALE: "clock", VERIFICATION_RENEWED: "shield", ACCEPTANCE_INACTIVE: "minus", MINT_SUPPORT_CHANGED: "coin" };
+  const CHANGE_ICON = { STABLECOIN_ADDED: "plus", STABLECOIN_REMOVED: "minus", PROVIDER_CHANGED: "route", ENDPOINT_CHANGED: "endpoint", VERIFICATION_STALE: "clock", VERIFICATION_RENEWED: "shield", ACCEPTANCE_INACTIVE: "minus", TOKEN_SUPPORT_CHANGED: "coin" };
 
   function changes() {
     const list = $("[data-timeline]");
@@ -692,12 +693,12 @@
     if (dl) {
       const row = (k, v, ok) => `<div><dt>${esc(k)}</dt><dd><span class="dotstate${ok ? " ok" : ""}" aria-hidden="true"></span>${v}</dd></div>`;
       const host = (u) => { try { return new URL(u).host; } catch { return u; } };
-      const prog = (label, id) => row(label, id ? addr(id, `${label} program ID`, R.explorerLink(cfg, "address", id)) : '<span class="mini__muted">Not deployed</span>', Boolean(id));
+      const contract = (label, a) => row(label, a ? addr(a, `${label} address`, R.explorerLink(cfg, "address", a)) : '<span class="mini__muted">Not deployed</span>', Boolean(a));
       dl.innerHTML = [
-        row("Cluster", esc(`Solana ${cfg.clusterLabel}`), true),
+        row("Network", esc(`${cfg.chainName} · Chain ID ${cfg.chainId}`), true),
         row("API", cfg.apiBaseUrl ? `<span class="mono trunc">${esc(host(cfg.apiBaseUrl))}</span>` : '<span class="mini__muted">Coming soon. Demo data in use.</span>', Boolean(cfg.apiBaseUrl)),
-        ...Object.entries(cfg.programs).map(([k, v]) => prog(`${k.charAt(0).toUpperCase()}${k.slice(1)} program`, v)),
-        row("Token mint", cfg.token.mint ? addr(cfg.token.mint, "token mint") : '<span class="mini__muted">Coming soon</span>', Boolean(cfg.token.mint)),
+        ...Object.entries(cfg.contracts).map(([k, v]) => contract(`${k.charAt(0).toUpperCase()}${k.slice(1)} contract`, v)),
+        row("Token contract", cfg.token.address ? addr(cfg.token.address, "token contract", R.isAddress(cfg.token.address) ? R.explorerLink(cfg, "token", cfg.token.address) : "") : '<span class="mini__muted">Coming soon</span>', Boolean(cfg.token.address)),
       ].join("");
     }
     const pre = $("[data-code]");
@@ -705,16 +706,16 @@
       const t = transactions[0];
       const coin = coinBySymbol(t.stablecoin);
       const body = {
-        signature: t.signature,
+        hash: t.hash,
         verdict: t.verdict,
         classification: t.classification,
         confidence: t.confidence,
-        stablecoin: { symbol: t.stablecoin, mint: coin ? coin.mint : "" },
+        stablecoin: { symbol: t.stablecoin, contract: coin ? coin.address : "" },
         amount: t.amount,
         merchant: merchantById(t.merchant)?.name,
         provider: providerById(t.provider)?.name,
         verification: { status: t.verification.toLowerCase(), last_checked: merchantById(t.merchant)?.lastVerified },
-        programs: t.programs,
+        contracts: t.contracts,
       };
       const json = JSON.stringify(body, null, 2)
         .replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]))
@@ -722,7 +723,7 @@
         .replace(/: ("[^"]*")/g, ': <span class="s">$1</span>')
         .replace(/: (\d[\d.]*)/g, ': <span class="n">$1</span>')
         .replace(/^(\s+)("[^"]*")(,?)$/gm, '$1<span class="s">$2</span>$3');
-      pre.innerHTML = `<span class="c">// GET /v1/transactions/{signature}</span>\n${json}`;
+      pre.innerHTML = `<span class="c">// GET /v1/transactions/{hash}</span>\n${json}`;
     }
   }
 
@@ -760,7 +761,7 @@
     classification();
     analyzer();
     intelligence();
-    solana();
+    chain();
     verification();
     changes();
     apiStatus();

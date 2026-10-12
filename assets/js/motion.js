@@ -78,7 +78,7 @@
     const time = document.querySelector("[data-clock]");
     const compass = document.querySelector("[data-compass]");
     const cluster = document.querySelector("[data-cluster]");
-    if (cluster) cluster.textContent = `Solana ${R.config.clusterLabel}`;
+    if (cluster) cluster.textContent = R.config.chainName;
     if (!time) return;
     const update = () => {
       const d = new Date();

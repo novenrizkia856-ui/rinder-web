@@ -24,7 +24,7 @@
   --neutral-900: #2c2c2c;
   --ink: #171717;
 
-  /* Night, for the art, Solana band and dark panels */
+  /* Night, for the art, chain band and dark panels */
   --night: #0b1414;
   --night-2: #122020;
   --night-3: #1a2b2b;
@@ -766,23 +766,23 @@ a:hover .cap svg, button:hover .cap svg { animation: slideOut 0.8s steps(6, end)
 .delta--up { color: var(--v-verified); }
 .delta--down { color: var(--v-stale); }
 
-/* ---------- Solana band ---------- */
-.solana {
+/* ---------- Robinhood Chain band ---------- */
+.chain {
   position: relative; overflow: hidden; color: var(--cream);
   padding: var(--pad-y) var(--pad-x);
   background: var(--grid-dark), var(--night);
 }
 /* Dithered glows in place of the reference's soft radial light: banded, like a limited palette */
-.solana::before { content: ""; position: absolute; inset: 0; pointer-events: none; background-image: conic-gradient(rgba(160, 215, 209, 0.16) 25%, transparent 0 50%, rgba(160, 215, 209, 0.16) 0 75%, transparent 0); background-size: 4px 4px; -webkit-mask-image: radial-gradient(38% 30% at 8% 0%, #000 0 40%, rgba(0, 0, 0, 0.55) 40% 70%, rgba(0, 0, 0, 0.22) 70% 100%, transparent 100%); mask-image: radial-gradient(38% 30% at 8% 0%, #000 0 40%, rgba(0, 0, 0, 0.55) 40% 70%, rgba(0, 0, 0, 0.22) 70% 100%, transparent 100%); }
-.solana::after { content: ""; position: absolute; inset: 0; pointer-events: none; background-image: conic-gradient(rgba(0, 129, 192, 0.28) 25%, transparent 0 50%, rgba(0, 129, 192, 0.28) 0 75%, transparent 0); background-size: 4px 4px; -webkit-mask-image: radial-gradient(34% 34% at 100% 100%, #000 0 40%, rgba(0, 0, 0, 0.55) 40% 70%, rgba(0, 0, 0, 0.22) 70% 100%, transparent 100%); mask-image: radial-gradient(34% 34% at 100% 100%, #000 0 40%, rgba(0, 0, 0, 0.55) 40% 70%, rgba(0, 0, 0, 0.22) 70% 100%, transparent 100%); }
-.solana__inner, .solana__lower { position: relative; max-width: 1280px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr); gap: 48px; }
-@media (min-width: 1024px) { .solana__inner { grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); align-items: center; gap: 64px; } }
-.solana__lede { margin: 20px 0 36px; color: var(--cream-60); max-width: 34ch; font-size: 17px; }
-.solana__stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); background: repeating-linear-gradient(90deg, var(--cream-60) 0 4px, transparent 4px 8px) left top / 100% 2px no-repeat; margin-bottom: 20px; }
-.solana__stats div { padding: 16px 12px 18px 0; box-shadow: inset 0 -2px 0 var(--night-line); }
-.solana__stats dt { font-size: 14px; color: var(--cream-60); margin-bottom: 8px; }
-.solana__stats dd { font-family: var(--font-mono); font-size: 44px; line-height: 0.8; color: #fff; font-variant-numeric: tabular-nums; }
-.solana__stats dd small { font-family: var(--font-pixel); font-size: 9px; color: rgba(255, 255, 255, 0.4); margin-left: 6px; vertical-align: 6px; letter-spacing: 0.04em; }
+.chain::before { content: ""; position: absolute; inset: 0; pointer-events: none; background-image: conic-gradient(rgba(160, 215, 209, 0.16) 25%, transparent 0 50%, rgba(160, 215, 209, 0.16) 0 75%, transparent 0); background-size: 4px 4px; -webkit-mask-image: radial-gradient(38% 30% at 8% 0%, #000 0 40%, rgba(0, 0, 0, 0.55) 40% 70%, rgba(0, 0, 0, 0.22) 70% 100%, transparent 100%); mask-image: radial-gradient(38% 30% at 8% 0%, #000 0 40%, rgba(0, 0, 0, 0.55) 40% 70%, rgba(0, 0, 0, 0.22) 70% 100%, transparent 100%); }
+.chain::after { content: ""; position: absolute; inset: 0; pointer-events: none; background-image: conic-gradient(rgba(0, 129, 192, 0.28) 25%, transparent 0 50%, rgba(0, 129, 192, 0.28) 0 75%, transparent 0); background-size: 4px 4px; -webkit-mask-image: radial-gradient(34% 34% at 100% 100%, #000 0 40%, rgba(0, 0, 0, 0.55) 40% 70%, rgba(0, 0, 0, 0.22) 70% 100%, transparent 100%); mask-image: radial-gradient(34% 34% at 100% 100%, #000 0 40%, rgba(0, 0, 0, 0.55) 40% 70%, rgba(0, 0, 0, 0.22) 70% 100%, transparent 100%); }
+.chain__inner, .chain__lower { position: relative; max-width: 1280px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr); gap: 48px; }
+@media (min-width: 1024px) { .chain__inner { grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); align-items: center; gap: 64px; } }
+.chain__lede { margin: 20px 0 36px; color: var(--cream-60); max-width: 34ch; font-size: 17px; }
+.chain__stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); background: repeating-linear-gradient(90deg, var(--cream-60) 0 4px, transparent 4px 8px) left top / 100% 2px no-repeat; margin-bottom: 20px; }
+.chain__stats div { padding: 16px 12px 18px 0; box-shadow: inset 0 -2px 0 var(--night-line); }
+.chain__stats dt { font-size: 14px; color: var(--cream-60); margin-bottom: 8px; }
+.chain__stats dd { font-family: var(--font-mono); font-size: 44px; line-height: 0.8; color: #fff; font-variant-numeric: tabular-nums; }
+.chain__stats dd small { font-family: var(--font-pixel); font-size: 9px; color: rgba(255, 255, 255, 0.4); margin-left: 6px; vertical-align: 6px; letter-spacing: 0.04em; }
 .map { --bc: var(--night-line); --bg: rgba(255, 255, 255, 0.02); padding: 14px; }
 .map__scroll { --bc: rgba(207, 211, 207, 0.28); --bg: rgba(8, 15, 15, 0.8); overflow-x: auto; scrollbar-width: thin; }
 .map__svg { width: 100%; height: auto; font-family: var(--font-pixel); }
@@ -800,8 +800,8 @@ a:hover .cap svg, button:hover .cap svg { animation: slideOut 0.8s steps(6, end)
 .map .out rect { fill: rgba(192, 255, 1, 0.1); stroke: var(--lime); }
 .map .out .v { fill: var(--lime); }
 
-.solana__lower { margin-top: 64px; }
-@media (min-width: 1024px) { .solana__lower { grid-template-columns: minmax(0, 1.4fr) minmax(0, 0.6fr); gap: 64px; margin-top: 96px; } }
+.chain__lower { margin-top: 64px; }
+@media (min-width: 1024px) { .chain__lower { grid-template-columns: minmax(0, 1.4fr) minmax(0, 0.6fr); gap: 64px; margin-top: 96px; } }
 .feed__head { display: flex; align-items: center; gap: 10px; padding-bottom: 14px; background: linear-gradient(var(--night-line) 0 0) left bottom / 100% 2px no-repeat; }
 .live { width: 8px; height: 8px; background: var(--lime); animation: blink 1.2s steps(1) infinite; }
 .feed__list { position: relative; min-height: 290px; overflow: hidden; }
@@ -813,11 +813,11 @@ a:hover .cap svg, button:hover .cap svg { animation: slideOut 0.8s steps(6, end)
   .feed__row { grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto auto; height: auto; padding: 10px 0; row-gap: 6px; }
   .feed__row .col-coin, .feed__row .col-conf { display: none; }
 }
-.programs__list { display: flex; flex-direction: column; }
-.programs__list li { display: grid; grid-template-columns: minmax(0, 1fr) 90px 38px; gap: 12px; align-items: center; padding: 12px 0; font-size: 14px; background: repeating-linear-gradient(90deg, var(--night-line) 0 2px, transparent 2px 6px) left bottom / 100% 2px no-repeat; }
-.programs__list .mini__bar { background: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.1) 0 4px, transparent 4px 6px); }
-.programs__list .mini__bar i { background: repeating-linear-gradient(90deg, var(--mint-3) 0 4px, transparent 4px 6px); }
-.programs__list li span:last-child { text-align: right; font-family: var(--font-mono); font-size: 17px; color: var(--cream-60); }
+.contracts__list { display: flex; flex-direction: column; }
+.contracts__list li { display: grid; grid-template-columns: minmax(0, 1fr) 90px 38px; gap: 12px; align-items: center; padding: 12px 0; font-size: 14px; background: repeating-linear-gradient(90deg, var(--night-line) 0 2px, transparent 2px 6px) left bottom / 100% 2px no-repeat; }
+.contracts__list .mini__bar { background: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.1) 0 4px, transparent 4px 6px); }
+.contracts__list .mini__bar i { background: repeating-linear-gradient(90deg, var(--mint-3) 0 4px, transparent 4px 6px); }
+.contracts__list li span:last-child { text-align: right; font-family: var(--font-mono); font-size: 17px; color: var(--cream-60); }
 
 /* ---------- Verification ---------- */
 .verify__grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 48px; align-items: center; max-width: 1080px; margin: 0 auto; }
@@ -892,7 +892,7 @@ a:hover .cap svg, button:hover .cap svg { animation: slideOut 0.8s steps(6, end)
 /* ---------- API ---------- */
 .api { padding-top: 0; }
 .api__grid { max-width: 1080px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr); gap: 48px; align-items: start; }
-.api__grid > *, .fig, .solana__inner > *, .solana__lower > *, .verify__grid > *, .overview__grid > * { min-width: 0; }
+.api__grid > *, .fig, .chain__inner > *, .chain__lower > *, .verify__grid > *, .overview__grid > * { min-width: 0; }
 .footer__bar:has(> :only-child) { justify-content: center; }
 @media (min-width: 1024px) { .api__grid { grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: 64px; } }
 .endpoints { margin: 36px 0 32px; background: linear-gradient(var(--ink) 0 0) left top / 100% 2px no-repeat; }
